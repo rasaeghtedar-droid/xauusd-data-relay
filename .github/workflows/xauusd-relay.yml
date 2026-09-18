@@ -16,81 +16,132 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Diagnose Biquote XAUUSD OHLC
+      - name: Fetch XAUUSD OHLC
         run: |
           set -euo pipefail
+
+          mkdir -p data
 
           python - <<'PY'
           import json
           import urllib.request
+          from pathlib import Path
+          from datetime import datetime, timezone
 
-          url = "https://biquote.io/api/XAUUSD/ohlc?interval=5m&limit=10"
+          BASE_URL = "https://biquote.io/api/XAUUSD/ohlc"
 
-          print("========================================")
-          print("BIQUOTE XAUUSD DIAGNOSTIC")
-          print("========================================")
-          print()
-          print("REQUEST URL:")
-          print(url)
-          print()
+          INTERVALS = {
+              "5m": 200,
+              "15m": 200,
+              "1h": 200,
+          }
 
-          request = urllib.request.Request(
-              url,
-              headers={
-                  "User-Agent": "Mozilla/5.0",
-                  "Accept": "application/json",
-              },
-          )
+          def fetch(interval, limit):
+              url = f"{BASE_URL}?interval={interval}&limit={limit}"
 
-          try:
+              request = urllib.request.Request(
+                  url,
+                  headers={
+                      "User-Agent": "XAUUSD-Data-Relay/1.0",
+                      "Accept": "application/json",
+                  },
+              )
+
               with urllib.request.urlopen(
                   request,
                   timeout=30
               ) as response:
 
-                  print("HTTP STATUS:")
-                  print(response.status)
-                  print()
+                  if response.status != 200:
+                      raise RuntimeError(
+                          f"HTTP {response.status} for {interval}"
+                      )
 
-                  raw = response.read().decode("utf-8")
+                  payload = json.load(response)
 
-          except Exception as e:
-              print("REQUEST ERROR:")
-              print(repr(e))
-              raise
+              bars = payload.get("bars", [])
 
-          print("RAW RESPONSE:")
-          print("----------------------------------------")
-          print(raw[:10000])
-          print("----------------------------------------")
+              if not bars:
+                  raise RuntimeError(
+                      f"No bars returned for {interval}"
+                  )
+
+              closed = [
+                  bar
+                  for bar in bars
+                  if bar.get("isOpen") is False
+              ]
+
+              if not closed:
+                  raise RuntimeError(
+                      f"No closed bars returned for {interval}"
+                  )
+
+              closed.sort(
+                  key=lambda bar: bar.get(
+                      "openTime",
+                      ""
+                  )
+              )
+
+              return {
+                  "latestClosed": closed[-1],
+                  "bars": closed[-200:],
+              }
+
+          fetched_at = datetime.now(
+              timezone.utc
+          ).isoformat().replace("+00:00", "Z")
+
+          output = {
+              "symbol": "XAUUSD",
+              "source": "Biquote",
+              "fetchedAt": fetched_at,
+              "intervals": {}
+          }
+
+          for interval, limit in INTERVALS.items():
+              print(f"Fetching {interval}...")
+              result = fetch(interval, limit)
+
+              output["intervals"][interval] = result
+
+              print(
+                  f"{interval} latest closed:",
+                  result["latestClosed"]
+              )
+
+          Path("data/xauusd.json").write_text(
+              json.dumps(
+                  output,
+                  ensure_ascii=False,
+                  separators=(",", ":")
+              ),
+              encoding="utf-8"
+          )
+
           print()
-
-          try:
-              payload = json.loads(raw)
-          except Exception as e:
-              print("JSON PARSE ERROR:")
-              print(repr(e))
-              raise
-
-          print("TOP LEVEL TYPE:")
-          print(type(payload).__name__)
-          print()
-
-          if isinstance(payload, dict):
-              print("TOP LEVEL KEYS:")
-              print(list(payload.keys()))
-              print()
-
-          if isinstance(payload, dict):
-              print("BARS AT ROOT:")
-              print(type(payload.get("bars")).__name__)
-              print()
-
-              print("BARS COUNT:")
-              print(len(payload.get("bars", [])))
-              print()
-
           print("========================================")
-          print("DIAGNOSTIC FINISHED")
+          print("RELAY UPDATE COMPLETED")
           print("========================================")
+          print("Fetched at:", fetched_at)
+          print("Intervals:", list(output["intervals"].keys()))
+          print("Output: data/xauusd.json")
           PY
+
+      - name: Commit and push
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add data/xauusd.json
+
+          if git diff --cached --quiet; then
+            echo "No data changes."
+            exit 0
+          fi
+
+          git commit -m "Update XAUUSD market data"
+          git push
