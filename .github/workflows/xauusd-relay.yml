@@ -16,20 +16,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Test Biquote XAUUSD OHLC
+      - name: Diagnose Biquote XAUUSD OHLC
         run: |
           set -euo pipefail
-
-          mkdir -p data
 
           python - <<'PY'
           import json
           import urllib.request
-          from pathlib import Path
-          from datetime import datetime, timezone
 
-          url = "https://biquote.io/api/XAUUSD/ohlc?interval=5m&limit=200"
+          url = "https://biquote.io/api/XAUUSD/ohlc?interval=5m&limit=10"
 
+          print("========================================")
+          print("BIQUOTE XAUUSD DIAGNOSTIC")
+          print("========================================")
+          print()
           print("REQUEST URL:")
           print(url)
           print()
@@ -38,112 +38,59 @@ jobs:
               url,
               headers={
                   "User-Agent": "Mozilla/5.0",
-                  "Accept": "application/json"
-              }
+                  "Accept": "application/json",
+              },
           )
 
-          with urllib.request.urlopen(
-              request,
-              timeout=30
-          ) as response:
+          try:
+              with urllib.request.urlopen(
+                  request,
+                  timeout=30
+              ) as response:
 
-              print("HTTP STATUS:")
-              print(response.status)
-              print()
+                  print("HTTP STATUS:")
+                  print(response.status)
+                  print()
 
-              raw = response.read().decode("utf-8")
+                  raw = response.read().decode("utf-8")
+
+          except Exception as e:
+              print("REQUEST ERROR:")
+              print(repr(e))
+              raise
 
           print("RAW RESPONSE:")
-          print(raw[:5000])
+          print("----------------------------------------")
+          print(raw[:10000])
+          print("----------------------------------------")
           print()
 
-          payload = json.loads(raw)
+          try:
+              payload = json.loads(raw)
+          except Exception as e:
+              print("JSON PARSE ERROR:")
+              print(repr(e))
+              raise
 
-          print("TOP LEVEL KEYS:")
-          print(list(payload.keys()))
+          print("TOP LEVEL TYPE:")
+          print(type(payload).__name__)
           print()
 
-          bars = payload.get("bars", [])
-
-          if not bars:
-              print("NO BARS FOUND AT payload['bars']")
+          if isinstance(payload, dict):
+              print("TOP LEVEL KEYS:")
+              print(list(payload.keys()))
               print()
-              print("FULL JSON:")
-              print(
-                  json.dumps(
-                      payload,
-                      indent=2,
-                      ensure_ascii=False
-                  )
-              )
-              raise RuntimeError(
-                  "Biquote response contains no bars"
-              )
 
-          closed = [
-              bar
-              for bar in bars
-              if bar.get("isOpen") is False
-          ]
+          if isinstance(payload, dict):
+              print("BARS AT ROOT:")
+              print(type(payload.get("bars")).__name__)
+              print()
 
-          if not closed:
-              raise RuntimeError(
-                  "Biquote returned bars but no closed bars"
-              )
+              print("BARS COUNT:")
+              print(len(payload.get("bars", [])))
+              print()
 
-          closed.sort(
-              key=lambda bar: bar.get(
-                  "openTime",
-                  ""
-              )
-          )
-
-          output = {
-              "symbol": "XAUUSD",
-              "source": "Biquote",
-              "fetchedAt": datetime.now(
-                  timezone.utc
-              ).isoformat().replace(
-                  "+00:00",
-                  "Z"
-              ),
-              "intervals": {
-                  "5m": {
-                      "latestClosed": closed[-1],
-                      "bars": closed[-200:]
-                  }
-              }
-          }
-
-          Path(
-              "data/xauusd.json"
-          ).write_text(
-              json.dumps(
-                  output,
-                  ensure_ascii=False,
-                  separators=(",", ":")
-              ),
-              encoding="utf-8"
-          )
-
-          print("SUCCESS")
-          print(
-              "Latest closed 5m:",
-              closed[-1]
-          )
+          print("========================================")
+          print("DIAGNOSTIC FINISHED")
+          print("========================================")
           PY
-
-      - name: Commit and push
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add data/xauusd.json
-
-          if git diff --cached --quiet; then
-            echo "No changes to commit."
-            exit 0
-          fi
-
-          git commit -m "Update XAUUSD market data"
-          git push
