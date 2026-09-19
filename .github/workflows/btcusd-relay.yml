@@ -1,0 +1,85 @@
+name: BTCUSD Data Relay
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/10 * * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Fetch compact BTCUSD analysis data
+        run: |
+          set -euo pipefail
+          mkdir -p data
+
+          python - <<'PY'
+          import json
+          import urllib.request
+          from pathlib import Path
+          from datetime import datetime, timezone
+
+          BASE_URL = "https://biquote.io/api/BTCUSD/ohlc"
+          LIMITS = {"5m": 60, "15m": 40, "1h": 40}
+
+          def fetch(interval, limit):
+              url = f"{BASE_URL}?interval={interval}&limit={limit}"
+              req = urllib.request.Request(
+                  url,
+                  headers={"User-Agent": "BTCUSD-Data-Relay/1.0", "Accept": "application/json"},
+              )
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  if response.status != 200:
+                      raise RuntimeError(f"HTTP {response.status} for {interval}")
+                  payload = json.load(response)
+
+              bars = [b for b in payload.get("bars", []) if b.get("isOpen") is False]
+              bars.sort(key=lambda b: b.get("openTime", ""))
+              if not bars:
+                  raise RuntimeError(f"No closed bars returned for {interval}")
+              return bars[-limit:]
+
+          fetched_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+          output = {
+              "symbol": "BTCUSD",
+              "source": "Biquote",
+              "fetchedAt": fetched_at,
+              "intervals": {}
+          }
+
+          for interval, limit in LIMITS.items():
+              bars = fetch(interval, limit)
+              output["intervals"][interval] = {
+                  "latestClosed": bars[-1],
+                  "bars": bars
+              }
+              print(f"{interval}: {len(bars)} closed bars")
+
+          Path("data/btcusd_analysis.json").write_text(
+              json.dumps(output, ensure_ascii=False, separators=(",", ":")),
+              encoding="utf-8"
+          )
+          print("Wrote data/btcusd_analysis.json")
+          print("Fetched at:", fetched_at)
+          PY
+
+      - name: Commit and push
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/btcusd_analysis.json
+          if git diff --cached --quiet; then
+            echo "No data changes."
+            exit 0
+          fi
+          git commit -m "Publish compact BTCUSD analysis data"
+          git push
