@@ -9,10 +9,10 @@
   },
   "signals": 0,
   "sweep_audit": {
-    "total_sweeps": 159,
+    "total_sweeps": 99,
     "by_confirmation": {
-      "confirmed": 67,
-      "unconfirmed": 92
+      "confirmed": 48,
+      "unconfirmed": 51
     },
     "details": [
       {
@@ -26,7 +26,7 @@
       {
         "time": "2026-09-21T15:00:00Z",
         "direction": "BUY",
-        "level": 4340.004,
+        "level": 4343.937,
         "type": "sell-side sweep",
         "close": 4346.669,
         "confirmation": "short-term bullish structure break"
@@ -38,14 +38,6 @@
         "type": "sell-side sweep",
         "close": 4350.131,
         "confirmation": "short-term bullish structure break"
-      },
-      {
-        "time": "2026-09-21T15:10:00Z",
-        "direction": "BUY",
-        "level": 4348.302,
-        "type": "sell-side sweep",
-        "close": 4349.282,
-        "confirmation": null
       },
       {
         "time": "2026-09-21T15:20:00Z",
@@ -66,7 +58,7 @@
       {
         "time": "2026-09-21T15:30:00Z",
         "direction": "BUY",
-        "level": 4350.14,
+        "level": 4352.018,
         "type": "sell-side sweep",
         "close": 4353.951,
         "confirmation": null
@@ -81,24 +73,16 @@
       },
       {
         "time": "2026-09-21T15:40:00Z",
-        "direction": "SELL",
-        "level": 4350.666,
-        "type": "buy-side sweep",
+        "direction": "BUY",
+        "level": 4348.312,
+        "type": "sell-side sweep",
         "close": 4350.067,
         "confirmation": null
       },
       {
-        "time": "2026-09-21T15:45:00Z",
-        "direction": "SELL",
-        "level": 4350.666,
-        "type": "buy-side sweep",
-        "close": 4348.129,
-        "confirmation": "short-term bearish structure break"
-      },
-      {
         "time": "2026-09-21T15:50:00Z",
         "direction": "SELL",
-        "level": 4354.24,
+        "level": 4348.048,
         "type": "buy-side sweep",
         "close": 4347.799,
         "confirmation": null
@@ -113,11 +97,11 @@
       },
       {
         "time": "2026-09-21T16:00:00Z",
-        "direction": "SELL",
-        "level": 4350.666,
-        "type": "buy-side sweep",
+        "direction": "BUY",
+        "level": 4345.807,
+        "type": "sell-side sweep",
         "close": 4350.43,
-        "confirmation": null
+        "confirmation": "bullish displacement"
       },
       {
         "time": "2026-09-21T16:05:00Z",
@@ -126,22 +110,6 @@
         "type": "buy-side sweep",
         "close": 4354.194,
         "confirmation": null
-      },
-      {
-        "time": "2026-09-21T16:10:00Z",
-        "direction": "SELL",
-        "level": 4354.246,
-        "type": "buy-side sweep",
-        "close": 4351.769,
-        "confirmation": null
-      },
-      {
-        "time": "2026-09-21T16:15:00Z",
-        "direction": "BUY",
-        "level": 4353.023,
-        "type": "sell-side sweep",
-        "close": 4356.478,
-        "confirmation": "short-term bullish structure break"
       },
       {
         "time": "2026-09-21T16:20:00Z",
@@ -157,14 +125,6 @@
         "level": 4348.932,
         "type": "sell-side sweep",
         "close": 4350.846,
-        "confirmation": null
-      },
-      {
-        "time": "2026-09-21T16:30:00Z",
-        "direction": "BUY",
-        "level": 4350.099,
-        "type": "sell-side sweep",
-        "close": 4351.185,
         "confirmation": null
       },
       {
@@ -192,22 +152,6 @@
         "confirmation": null
       },
       {
-        "time": "2026-09-21T16:50:00Z",
-        "direction": "BUY",
-        "level": 4343.84,
-        "type": "sell-side sweep",
-        "close": 4344.166,
-        "confirmation": null
-      },
-      {
-        "time": "2026-09-21T17:00:00Z",
-        "direction": "BUY",
-        "level": 4343.7,
-        "type": "sell-side sweep",
-        "close": 4343.908,
-        "confirmation": null
-      },
-      {
         "time": "2026-09-21T17:10:00Z",
         "direction": "BUY",
         "level": 4345.579,
@@ -224,28 +168,12 @@
         "confirmation": "bearish displacement"
       },
       {
-        "time": "2026-09-21T17:20:00Z",
-        "direction": "SELL",
-        "level": 4343.192,
-        "type": "buy-side sweep",
-        "close": 4342.597,
-        "confirmation": null
-      },
-      {
         "time": "2026-09-21T17:25:00Z",
         "direction": "BUY",
         "level": 4343.469,
         "type": "sell-side sweep",
         "close": 4345.714,
         "confirmation": "bullish displacement"
-      },
-      {
-        "time": "2026-09-21T17:30:00Z",
-        "direction": "SELL",
-        "level": 4343.192,
-        "type": "buy-side sweep",
-        "close": 4339.011,
-        "confirmation": "short-term bearish structure break"
       },
       {
         "time": "2026-09-21T17:45:00Z",
@@ -272,38 +200,6 @@
         "confirmation": null
       },
       {
-        "time": "2026-09-21T18:10:00Z",
-        "direction": "SELL",
-        "level": 4350.666,
-        "type": "buy-side sweep",
-        "close": 4349.836,
-        "confirmation": null
-      },
-      {
-        "time": "2026-09-21T18:20:00Z",
-        "direction": "SELL",
-        "level": 4350.801,
-        "type": "buy-side sweep",
-        "close": 4350.154,
-        "confirmation": null
-      },
-      {
-        "time": "2026-09-21T18:25:00Z",
-        "direction": "SELL",
-        "level": 4350.801,
-        "type": "buy-side sweep",
-        "close": 4350.347,
-        "confirmation": null
-      },
-      {
-        "time": "2026-09-21T18:30:00Z",
-        "direction": "SELL",
-        "level": 4350.726,
-        "type": "buy-side sweep",
-        "close": 4349.508,
-        "confirmation": null
-      },
-      {
         "time": "2026-09-21T18:55:00Z",
         "direction": "SELL",
         "level": 4346.793,
@@ -320,14 +216,6 @@
         "confirmation": "bullish displacement"
       },
       {
-        "time": "2026-09-21T19:10:00Z",
-        "direction": "BUY",
-        "level": 4345.054,
-        "type": "sell-side sweep",
-        "close": 4345.789,
-        "confirmation": "bullish continuation"
-      },
-      {
         "time": "2026-09-21T19:15:00Z",
         "direction": "SELL",
         "level": 4346.768,
@@ -337,9 +225,9 @@
       },
       {
         "time": "2026-09-21T19:20:00Z",
-        "direction": "SELL",
-        "level": 4346.768,
-        "type": "buy-side sweep",
+        "direction": "BUY",
+        "level": 4345.86,
+        "type": "sell-side sweep",
         "close": 4346.239,
         "confirmation": null
       },
@@ -360,17 +248,9 @@
         "confirmation": null
       },
       {
-        "time": "2026-09-21T19:35:00Z",
-        "direction": "SELL",
-        "level": 4353.096,
-        "type": "buy-side sweep",
-        "close": 4352.95,
-        "confirmation": null
-      },
-      {
         "time": "2026-09-21T19:40:00Z",
         "direction": "SELL",
-        "level": 4353.096,
+        "level": 4351.533,
         "type": "buy-side sweep",
         "close": 4348.145,
         "confirmation": "bearish displacement"
@@ -392,27 +272,11 @@
         "confirmation": null
       },
       {
-        "time": "2026-09-21T19:55:00Z",
-        "direction": "BUY",
-        "level": 4345.024,
-        "type": "sell-side sweep",
-        "close": 4345.348,
-        "confirmation": null
-      },
-      {
         "time": "2026-09-21T20:00:00Z",
         "direction": "SELL",
         "level": 4343.192,
         "type": "buy-side sweep",
         "close": 4343.087,
-        "confirmation": "short-term bearish structure break"
-      },
-      {
-        "time": "2026-09-21T20:10:00Z",
-        "direction": "SELL",
-        "level": 4343.192,
-        "type": "buy-side sweep",
-        "close": 4341.643,
         "confirmation": "short-term bearish structure break"
       },
       {
@@ -432,14 +296,6 @@
         "confirmation": null
       },
       {
-        "time": "2026-09-21T20:45:00Z",
-        "direction": "BUY",
-        "level": 4341.409,
-        "type": "sell-side sweep",
-        "close": 4341.71,
-        "confirmation": null
-      },
-      {
         "time": "2026-09-21T20:50:00Z",
         "direction": "BUY",
         "level": 4342.954,
@@ -453,14 +309,6 @@
         "level": 4347.724,
         "type": "sell-side sweep",
         "close": 4348.227,
-        "confirmation": "short-term bullish structure break"
-      },
-      {
-        "time": "2026-09-21T22:05:00Z",
-        "direction": "BUY",
-        "level": 4347.724,
-        "type": "sell-side sweep",
-        "close": 4349.204,
         "confirmation": "short-term bullish structure break"
       },
       {
@@ -478,38 +326,6 @@
         "type": "buy-side sweep",
         "close": 4352.291,
         "confirmation": null
-      },
-      {
-        "time": "2026-09-21T22:20:00Z",
-        "direction": "SELL",
-        "level": 4352.614,
-        "type": "buy-side sweep",
-        "close": 4351.953,
-        "confirmation": null
-      },
-      {
-        "time": "2026-09-21T22:30:00Z",
-        "direction": "SELL",
-        "level": 4352.614,
-        "type": "buy-side sweep",
-        "close": 4351.546,
-        "confirmation": null
-      },
-      {
-        "time": "2026-09-21T23:30:00Z",
-        "direction": "BUY",
-        "level": 4359.09,
-        "type": "sell-side sweep",
-        "close": 4360.223,
-        "confirmation": null
-      },
-      {
-        "time": "2026-09-21T23:35:00Z",
-        "direction": "BUY",
-        "level": 4359.09,
-        "type": "sell-side sweep",
-        "close": 4365.248,
-        "confirmation": "short-term bullish structure break"
       },
       {
         "time": "2026-09-22T00:10:00Z",
@@ -568,22 +384,6 @@
         "confirmation": "short-term bullish structure break"
       },
       {
-        "time": "2026-09-22T00:55:00Z",
-        "direction": "BUY",
-        "level": 4358.206,
-        "type": "sell-side sweep",
-        "close": 4360.422,
-        "confirmation": "short-term bullish structure break"
-      },
-      {
-        "time": "2026-09-22T01:00:00Z",
-        "direction": "BUY",
-        "level": 4358.206,
-        "type": "sell-side sweep",
-        "close": 4361.638,
-        "confirmation": "short-term bullish structure break"
-      },
-      {
         "time": "2026-09-22T01:05:00Z",
         "direction": "SELL",
         "level": 4365.044,
@@ -608,22 +408,6 @@
         "confirmation": null
       },
       {
-        "time": "2026-09-22T01:20:00Z",
-        "direction": "BUY",
-        "level": 4351.983,
-        "type": "sell-side sweep",
-        "close": 4354.934,
-        "confirmation": null
-      },
-      {
-        "time": "2026-09-22T01:30:00Z",
-        "direction": "BUY",
-        "level": 4353.19,
-        "type": "sell-side sweep",
-        "close": 4355.489,
-        "confirmation": null
-      },
-      {
         "time": "2026-09-22T01:40:00Z",
         "direction": "SELL",
         "level": 4352.614,
@@ -634,7 +418,7 @@
       {
         "time": "2026-09-22T01:45:00Z",
         "direction": "SELL",
-        "level": 4351.015,
+        "level": 4348.15,
         "type": "buy-side sweep",
         "close": 4346.072,
         "confirmation": "short-term bearish structure break"
@@ -690,18 +474,10 @@
       {
         "time": "2026-09-22T02:30:00Z",
         "direction": "BUY",
-        "level": 4349.025,
+        "level": 4353.19,
         "type": "sell-side sweep",
         "close": 4355.012,
         "confirmation": "short-term bullish structure break"
-      },
-      {
-        "time": "2026-09-22T02:35:00Z",
-        "direction": "BUY",
-        "level": 4353.19,
-        "type": "sell-side sweep",
-        "close": 4353.265,
-        "confirmation": null
       },
       {
         "time": "2026-09-22T02:40:00Z",
@@ -736,30 +512,6 @@
         "confirmation": null
       },
       {
-        "time": "2026-09-22T03:00:00Z",
-        "direction": "SELL",
-        "level": 4342.512,
-        "type": "buy-side sweep",
-        "close": 4342.189,
-        "confirmation": null
-      },
-      {
-        "time": "2026-09-22T03:05:00Z",
-        "direction": "SELL",
-        "level": 4342.512,
-        "type": "buy-side sweep",
-        "close": 4340.262,
-        "confirmation": "short-term bearish structure break"
-      },
-      {
-        "time": "2026-09-22T03:10:00Z",
-        "direction": "BUY",
-        "level": 4340.967,
-        "type": "sell-side sweep",
-        "close": 4345.445,
-        "confirmation": "bullish displacement"
-      },
-      {
         "time": "2026-09-22T03:15:00Z",
         "direction": "SELL",
         "level": 4345.982,
@@ -770,18 +522,10 @@
       {
         "time": "2026-09-22T03:25:00Z",
         "direction": "BUY",
-        "level": 4343.862,
+        "level": 4345.796,
         "type": "sell-side sweep",
         "close": 4346.015,
         "confirmation": "bullish continuation"
-      },
-      {
-        "time": "2026-09-22T03:30:00Z",
-        "direction": "BUY",
-        "level": 4345.744,
-        "type": "sell-side sweep",
-        "close": 4347.217,
-        "confirmation": "short-term bullish structure break"
       },
       {
         "time": "2026-09-22T03:35:00Z",
@@ -790,14 +534,6 @@
         "type": "buy-side sweep",
         "close": 4347.454,
         "confirmation": null
-      },
-      {
-        "time": "2026-09-22T03:40:00Z",
-        "direction": "SELL",
-        "level": 4346.144,
-        "type": "buy-side sweep",
-        "close": 4343.13,
-        "confirmation": "bearish displacement"
       },
       {
         "time": "2026-09-22T03:45:00Z",
@@ -816,52 +552,12 @@
         "confirmation": null
       },
       {
-        "time": "2026-09-22T03:55:00Z",
-        "direction": "SELL",
-        "level": 4342.512,
-        "type": "buy-side sweep",
-        "close": 4341.987,
-        "confirmation": null
-      },
-      {
         "time": "2026-09-22T04:35:00Z",
         "direction": "BUY",
         "level": 4339.253,
         "type": "sell-side sweep",
         "close": 4341.132,
         "confirmation": "short-term bullish structure break"
-      },
-      {
-        "time": "2026-09-22T04:40:00Z",
-        "direction": "BUY",
-        "level": 4339.253,
-        "type": "sell-side sweep",
-        "close": 4340.369,
-        "confirmation": null
-      },
-      {
-        "time": "2026-09-22T04:45:00Z",
-        "direction": "BUY",
-        "level": 4339.47,
-        "type": "sell-side sweep",
-        "close": 4340.293,
-        "confirmation": null
-      },
-      {
-        "time": "2026-09-22T04:50:00Z",
-        "direction": "BUY",
-        "level": 4339.47,
-        "type": "sell-side sweep",
-        "close": 4342.908,
-        "confirmation": "short-term bullish structure break"
-      },
-      {
-        "time": "2026-09-22T04:55:00Z",
-        "direction": "BUY",
-        "level": 4341.121,
-        "type": "sell-side sweep",
-        "close": 4342.881,
-        "confirmation": null
       },
       {
         "time": "2026-09-22T05:00:00Z",
@@ -904,44 +600,12 @@
         "confirmation": null
       },
       {
-        "time": "2026-09-22T07:00:00Z",
-        "direction": "SELL",
-        "level": 4321.269,
-        "type": "buy-side sweep",
-        "close": 4318.49,
-        "confirmation": null
-      },
-      {
-        "time": "2026-09-22T07:10:00Z",
-        "direction": "SELL",
-        "level": 4321.269,
-        "type": "buy-side sweep",
-        "close": 4320.35,
-        "confirmation": null
-      },
-      {
         "time": "2026-09-22T07:15:00Z",
         "direction": "SELL",
         "level": 4323.208,
         "type": "buy-side sweep",
         "close": 4322.773,
         "confirmation": null
-      },
-      {
-        "time": "2026-09-22T07:20:00Z",
-        "direction": "SELL",
-        "level": 4323.208,
-        "type": "buy-side sweep",
-        "close": 4321.971,
-        "confirmation": null
-      },
-      {
-        "time": "2026-09-22T07:25:00Z",
-        "direction": "SELL",
-        "level": 4321.269,
-        "type": "buy-side sweep",
-        "close": 4315.545,
-        "confirmation": "short-term bearish structure break"
       },
       {
         "time": "2026-09-22T08:25:00Z",
@@ -1000,22 +664,6 @@
         "confirmation": null
       },
       {
-        "time": "2026-09-22T09:10:00Z",
-        "direction": "SELL",
-        "level": 4321.422,
-        "type": "buy-side sweep",
-        "close": 4318.615,
-        "confirmation": null
-      },
-      {
-        "time": "2026-09-22T09:15:00Z",
-        "direction": "SELL",
-        "level": 4323.164,
-        "type": "buy-side sweep",
-        "close": 4317.382,
-        "confirmation": null
-      },
-      {
         "time": "2026-09-22T09:25:00Z",
         "direction": "SELL",
         "level": 4315.995,
@@ -1024,18 +672,10 @@
         "confirmation": "short-term bearish structure break"
       },
       {
-        "time": "2026-09-22T09:30:00Z",
-        "direction": "SELL",
-        "level": 4315.995,
-        "type": "buy-side sweep",
-        "close": 4314.586,
-        "confirmation": null
-      },
-      {
         "time": "2026-09-22T09:35:00Z",
-        "direction": "SELL",
-        "level": 4315.995,
-        "type": "buy-side sweep",
+        "direction": "BUY",
+        "level": 4315.09,
+        "type": "sell-side sweep",
         "close": 4315.994,
         "confirmation": null
       },
@@ -1072,38 +712,6 @@
         "confirmation": null
       },
       {
-        "time": "2026-09-22T10:10:00Z",
-        "direction": "SELL",
-        "level": 4333.401,
-        "type": "buy-side sweep",
-        "close": 4330.865,
-        "confirmation": "bearish continuation"
-      },
-      {
-        "time": "2026-09-22T10:30:00Z",
-        "direction": "SELL",
-        "level": 4331.877,
-        "type": "buy-side sweep",
-        "close": 4328.553,
-        "confirmation": null
-      },
-      {
-        "time": "2026-09-22T10:35:00Z",
-        "direction": "SELL",
-        "level": 4331.877,
-        "type": "buy-side sweep",
-        "close": 4331.151,
-        "confirmation": null
-      },
-      {
-        "time": "2026-09-22T10:40:00Z",
-        "direction": "SELL",
-        "level": 4331.877,
-        "type": "buy-side sweep",
-        "close": 4331.261,
-        "confirmation": null
-      },
-      {
         "time": "2026-09-22T10:55:00Z",
         "direction": "SELL",
         "level": 4323.259,
@@ -1114,7 +722,7 @@
       {
         "time": "2026-09-22T11:00:00Z",
         "direction": "SELL",
-        "level": 4323.259,
+        "level": 4321.228,
         "type": "buy-side sweep",
         "close": 4319.155,
         "confirmation": "short-term bearish structure break"
@@ -1129,50 +737,10 @@
       },
       {
         "time": "2026-09-22T11:10:00Z",
-        "direction": "SELL",
-        "level": 4315.995,
-        "type": "buy-side sweep",
+        "direction": "BUY",
+        "level": 4312.011,
+        "type": "sell-side sweep",
         "close": 4315.193,
-        "confirmation": null
-      },
-      {
-        "time": "2026-09-22T11:15:00Z",
-        "direction": "SELL",
-        "level": 4315.995,
-        "type": "buy-side sweep",
-        "close": 4312.626,
-        "confirmation": null
-      },
-      {
-        "time": "2026-09-22T11:20:00Z",
-        "direction": "BUY",
-        "level": 4315.09,
-        "type": "sell-side sweep",
-        "close": 4316.676,
-        "confirmation": null
-      },
-      {
-        "time": "2026-09-22T11:25:00Z",
-        "direction": "BUY",
-        "level": 4315.09,
-        "type": "sell-side sweep",
-        "close": 4317.774,
-        "confirmation": "bullish continuation"
-      },
-      {
-        "time": "2026-09-22T11:30:00Z",
-        "direction": "SELL",
-        "level": 4315.995,
-        "type": "buy-side sweep",
-        "close": 4314.191,
-        "confirmation": "bearish continuation"
-      },
-      {
-        "time": "2026-09-22T11:35:00Z",
-        "direction": "BUY",
-        "level": 4315.09,
-        "type": "sell-side sweep",
-        "close": 4317.025,
         "confirmation": null
       },
       {
@@ -1184,43 +752,11 @@
         "confirmation": null
       },
       {
-        "time": "2026-09-22T11:50:00Z",
-        "direction": "SELL",
-        "level": 4321.058,
-        "type": "buy-side sweep",
-        "close": 4318.033,
-        "confirmation": null
-      },
-      {
         "time": "2026-09-22T11:55:00Z",
         "direction": "SELL",
         "level": 4323.305,
         "type": "buy-side sweep",
         "close": 4322.489,
-        "confirmation": null
-      },
-      {
-        "time": "2026-09-22T12:00:00Z",
-        "direction": "BUY",
-        "level": 4322.388,
-        "type": "sell-side sweep",
-        "close": 4325.203,
-        "confirmation": "short-term bullish structure break"
-      },
-      {
-        "time": "2026-09-22T12:05:00Z",
-        "direction": "SELL",
-        "level": 4323.329,
-        "type": "buy-side sweep",
-        "close": 4321.377,
-        "confirmation": "bearish displacement"
-      },
-      {
-        "time": "2026-09-22T12:10:00Z",
-        "direction": "BUY",
-        "level": 4322.388,
-        "type": "sell-side sweep",
-        "close": 4323.925,
         "confirmation": null
       },
       {
@@ -1242,7 +778,7 @@
       {
         "time": "2026-09-22T12:40:00Z",
         "direction": "SELL",
-        "level": 4338.174,
+        "level": 4335.777,
         "type": "buy-side sweep",
         "close": 4332.23,
         "confirmation": "bearish displacement"
@@ -1253,22 +789,6 @@
         "level": 4333.299,
         "type": "buy-side sweep",
         "close": 4332.914,
-        "confirmation": null
-      },
-      {
-        "time": "2026-09-22T12:50:00Z",
-        "direction": "SELL",
-        "level": 4335.777,
-        "type": "buy-side sweep",
-        "close": 4334.63,
-        "confirmation": null
-      },
-      {
-        "time": "2026-09-22T12:55:00Z",
-        "direction": "SELL",
-        "level": 4335.777,
-        "type": "buy-side sweep",
-        "close": 4334.044,
         "confirmation": null
       },
       {
