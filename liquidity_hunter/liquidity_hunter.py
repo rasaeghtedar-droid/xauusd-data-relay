@@ -145,29 +145,44 @@ def build_trade(sweep: dict[str, Any], m5: list[dict[str, Any]], m15: list[dict[
     c = sweep["candle"]
     direction = sweep["direction"]
 
+    context = m15[-LIQUIDITY_LOOKBACK:]
     if direction == "BUY":
         entry = c["close"]
         sl = min(c["low"], sweep["level"]) - 0.5
-        targets = [x["high"] for x in m15[-20:] if x["high"] > entry]
-        if not targets:
+        # Target the next meaningful opposing liquidity/swing that actually
+        # provides the required R:R, rather than the nearest tiny M15 high.
+        target_levels = unique_levels(
+            recent_swing_highs(context) + equal_levels(context, "high")
+        )
+        candidates = sorted(x for x in target_levels if x > entry)
+        if sl >= entry or not candidates:
             return None
-        tp = min(targets)
-        if tp <= entry or sl >= entry:
+        viable = [
+            x for x in candidates
+            if (x - entry) / (entry - sl) >= MIN_RR
+        ]
+        if not viable:
             return None
+        tp = viable[0]
         rr = (tp - entry) / (entry - sl)
     else:
         entry = c["close"]
         sl = max(c["high"], sweep["level"]) + 0.5
-        targets = [x["low"] for x in m15[-20:] if x["low"] < entry]
-        if not targets:
+        # Mirror the BUY logic for sell-side targets.
+        target_levels = unique_levels(
+            recent_swing_lows(context) + equal_levels(context, "low")
+        )
+        candidates = sorted((x for x in target_levels if x < entry), reverse=True)
+        if sl <= entry or not candidates:
             return None
-        tp = max(targets)
-        if tp >= entry or sl <= entry:
+        viable = [
+            x for x in candidates
+            if (entry - x) / (sl - entry) >= MIN_RR
+        ]
+        if not viable:
             return None
+        tp = viable[0]
         rr = (entry - tp) / (sl - entry)
-
-    if rr < MIN_RR:
-        return None
 
     return {
         "signal": direction,
