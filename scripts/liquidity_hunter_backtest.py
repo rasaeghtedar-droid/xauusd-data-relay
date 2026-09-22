@@ -119,6 +119,29 @@ def main():
             reasons[reason] = reasons.get(reason,0)+1
 
     sweeps = audit_sweep(engine, m5, m15, h1)
+    # Diagnostic: measure whether confirmed sweeps have a viable 1:2 path
+    # before changing any strategy rule.
+    target_audit = []
+    for s in sweeps:
+        if not s["confirmation"]:
+            continue
+        idx = next((j for j, b in enumerate(m5) if b["openTime"] == s["time"]), None)
+        if idx is None:
+            continue
+        entry = m5[idx]["close"]
+        if s["direction"] == "BUY":
+            sl = min(m5[idx]["low"], s["level"]) - 0.5
+            targets = [x["high"] for x in m15 if parse_time(x["openTime"]) <= parse_time(s["time"]) - timedelta(minutes=15) and x["high"] > entry]
+            tp = min(targets) if targets else None
+            rr = ((tp-entry)/(entry-sl)) if tp is not None and entry > sl else None
+        else:
+            sl = max(m5[idx]["high"], s["level"]) + 0.5
+            targets = [x["low"] for x in m15 if parse_time(x["openTime"]) <= parse_time(s["time"]) - timedelta(minutes=15) and x["low"] < entry]
+            tp = max(targets) if targets else None
+            rr = ((entry-tp)/(sl-entry)) if tp is not None and sl > entry else None
+        target_audit.append({"time":s["time"],"direction":s["direction"],"entry":round(entry,3),
+                             "level":round(s["level"],3),"rr":round(rr,2) if rr is not None else None,
+                             "target":round(tp,3) if tp is not None else None})
     by_conf = {}
     for s in sweeps:
         key = "confirmed" if s["confirmation"] else "unconfirmed"
@@ -131,6 +154,13 @@ def main():
                 "last_m5":m5[-1]["openTime"] if m5 else None},
         "signals":len(signals),
         "sweep_audit":{"total_sweeps":len(sweeps),"by_confirmation":by_conf,"details":sweeps},
+        "target_audit":{
+            "confirmed_sweeps":len(target_audit),
+            "rr_ge_2":sum(1 for x in target_audit if x["rr"] is not None and x["rr"] >= 2.0),
+            "rr_lt_2":sum(1 for x in target_audit if x["rr"] is not None and x["rr"] < 2.0),
+            "no_target":sum(1 for x in target_audit if x["rr"] is None),
+            "details":target_audit
+        },
         "no_trade_reasons":reasons,
         "signal_details":signals,
         "notes":[
