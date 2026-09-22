@@ -80,6 +80,31 @@ def unique_levels(levels: list[float], tolerance: float = LEVEL_TOLERANCE) -> li
     return result
 
 
+def sweep_quality(c: dict[str, Any], level: float, direction: str) -> bool:
+    """Require a meaningful liquidity raid/rejection, not a tiny level cross."""
+    rng = range_size(c)
+    if rng <= 0:
+        return False
+
+    b = body(c)
+    penetration = (c["high"] - level) if direction == "SELL" else (level - c["low"])
+    if penetration <= 0:
+        return False
+
+    # The sweep should take a meaningful part of the candle's range.
+    if penetration < rng * 0.10:
+        return False
+
+    if direction == "SELL":
+        upper_wick = c["high"] - max(c["open"], c["close"])
+        close_position = (c["close"] - c["low"]) / rng
+        return upper_wick >= max(b * 0.5, rng * 0.15) and close_position <= 0.60
+
+    lower_wick = min(c["open"], c["close"]) - c["low"]
+    close_position = (c["close"] - c["low"]) / rng
+    return lower_wick >= max(b * 0.5, rng * 0.15) and close_position >= 0.40
+
+
 def find_latest_sweep(m5: list[dict[str, Any]], liquidity_highs: list[float], liquidity_lows: list[float]) -> dict[str, Any] | None:
     if len(m5) < 5:
         return None
@@ -88,12 +113,12 @@ def find_latest_sweep(m5: list[dict[str, Any]], liquidity_highs: list[float], li
 
     # Bearish reversal: buy-side liquidity taken, then close back below it.
     for level in sorted(liquidity_highs, reverse=True):
-        if current["high"] > level and current["close"] < level:
+        if current["high"] > level and current["close"] < level and sweep_quality(current, level, "SELL"):
             return {"direction": "SELL", "level": level, "candle": current, "type": "buy-side sweep"}
 
     # Bullish reversal: sell-side liquidity taken, then close back above it.
     for level in sorted(liquidity_lows):
-        if current["low"] < level and current["close"] > level:
+        if current["low"] < level and current["close"] > level and sweep_quality(current, level, "BUY"):
             return {"direction": "BUY", "level": level, "candle": current, "type": "sell-side sweep"}
 
     return None
