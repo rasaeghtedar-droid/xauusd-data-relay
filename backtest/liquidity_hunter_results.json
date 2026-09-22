@@ -1,0 +1,31 @@
+{
+  "status": "COMPLETED",
+  "data": {
+    "m5": 288,
+    "m15": 192,
+    "h1": 168,
+    "first_m5": "2026-09-21T12:00:00Z",
+    "last_m5": "2026-09-22T13:05:00Z"
+  },
+  "signals": 0,
+  "outcomes": {},
+  "completed_trades": 0,
+  "tp_count": 0,
+  "sl_count": 0,
+  "ambiguous_count": 0,
+  "win_rate_excluding_ambiguous": null,
+  "no_trade_reasons": {
+    "insufficient closed candle data": 9,
+    "sweep found but no M5 reversal confirmation": 98,
+    "no fresh liquidity sweep on latest M5 candle": 110,
+    "no logical target with minimum 1:2 R:R": 71
+  },
+  "signal_details": [],
+  "notes": [
+    "Replay uses only information available at each closed M5 candle.",
+    "15m/H1 candles are included only after their full interval has closed.",
+    "No broker execution, spread, slippage, or position sizing is simulated.",
+    "If SL and TP occur in the same future M5 candle, the result is marked ambiguous rather than choosing a winner.",
+    "This dataset is short and is not sufficient to establish long-run strategy performance."
+  ]
+}
