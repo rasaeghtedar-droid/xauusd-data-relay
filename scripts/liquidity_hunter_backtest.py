@@ -107,13 +107,28 @@ def main():
     engine = load_engine()
 
     signals, reasons = [], {}
+    active_until = None
+    active_direction = None
     for i in range(len(m5)):
         t = parse_time(m5[i]["openTime"])
+        # Do not issue another signal while a previous setup is unresolved.
+        if active_until is not None and t <= active_until:
+            continue
         ctx15 = [x for x in m15 if parse_time(x["openTime"]) <= t - timedelta(minutes=15)]
         ctx1 = [x for x in h1 if parse_time(x["openTime"]) <= t - timedelta(hours=1)]
         result = engine.analyze({"intervals":{"5m":{"bars":m5[:i+1]},"15m":{"bars":ctx15},"1h":{"bars":ctx1}}})
         if result.get("status") == "SETUP FOUND":
-            signals.append({**result, "outcome": evaluate_outcome(result, m5[i+1:])})
+            outcome = evaluate_outcome(result, m5[i+1:])
+            signals.append({**result, "outcome": outcome})
+            # Determine the first future candle where the setup is resolved.
+            for j, bar in enumerate(m5[i+1:], start=i+1):
+                hit_sl = bar["low"] <= result["sl"] if result["signal"] == "BUY" else bar["high"] >= result["sl"]
+                hit_tp = bar["high"] >= result["tp"] if result["signal"] == "BUY" else bar["low"] <= result["tp"]
+                if hit_sl or hit_tp:
+                    active_until = parse_time(bar["openTime"])
+                    break
+            else:
+                active_until = None
         else:
             reason = result.get("reason","unknown")
             reasons[reason] = reasons.get(reason,0)+1
