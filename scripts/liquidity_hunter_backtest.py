@@ -61,15 +61,31 @@ def audit_sweep(engine, m5, m15, h1):
         )
         c = m5[i]
         found = None
+        # Prevent one liquidity event from firing repeatedly on consecutive M5 candles.
+        recent = m5[max(0, i - 3):i]
         for level in sorted(highs, reverse=True):
             if c["high"] > level and c["close"] < level:
-                found = ("SELL", level, "buy-side sweep")
-                break
+                repeated = any(
+                    abs((x["high"] + x["low"]) / 2 - level) <= 3.0
+                    and x["high"] > level
+                    and x["close"] < level
+                    for x in recent
+                )
+                if not repeated:
+                    found = ("SELL", level, "buy-side sweep")
+                    break
         if not found:
             for level in sorted(lows):
                 if c["low"] < level and c["close"] > level:
-                    found = ("BUY", level, "sell-side sweep")
-                    break
+                    repeated = any(
+                        abs((x["high"] + x["low"]) / 2 - level) <= 3.0
+                        and x["low"] < level
+                        and x["close"] > level
+                        for x in recent
+                    )
+                    if not repeated:
+                        found = ("BUY", level, "sell-side sweep")
+                        break
         if found:
             direction, level, typ = found
             conf = engine.m5_confirmation(m5[:i+1], direction)
