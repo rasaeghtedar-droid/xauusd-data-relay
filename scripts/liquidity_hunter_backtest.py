@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Replay the Liquidity Hunter engine on archived closed candles."""
+"""Replay Liquidity Hunter and separately audit raw M5 liquidity sweeps."""
 
 from __future__ import annotations
 
@@ -32,7 +32,6 @@ def load_engine():
 def evaluate_outcome(signal, future_m5):
     entry, sl, tp = signal["entry"], signal["sl"], signal["tp"]
     direction = signal["signal"]
-
     for bar in future_m5:
         hit_sl = bar["low"] <= sl if direction == "BUY" else bar["high"] >= sl
         hit_tp = bar["high"] >= tp if direction == "BUY" else bar["low"] <= tp
@@ -45,85 +44,89 @@ def evaluate_outcome(signal, future_m5):
     return "OPEN_AT_DATA_END"
 
 
+def audit_sweep(engine, m5, m15, h1):
+    sweeps = []
+    for i in range(30, len(m5)):
+        t = parse_time(m5[i]["openTime"])
+        # Context only from M15 candles fully closed before this M5 candle.
+        ctx15 = [x for x in m15 if parse_time(x["openTime"]) <= t - timedelta(minutes=15)]
+        if len(ctx15) < 10:
+            continue
+        context = ctx15[-30:]
+        highs = engine.unique_levels(
+            engine.recent_swing_highs(context) + engine.equal_levels(context, "high")
+        )
+        lows = engine.unique_levels(
+            engine.recent_swing_lows(context) + engine.equal_levels(context, "low")
+        )
+        c = m5[i]
+        found = None
+        for level in sorted(highs, reverse=True):
+            if c["high"] > level and c["close"] < level:
+                found = ("SELL", level, "buy-side sweep")
+                break
+        if not found:
+            for level in sorted(lows):
+                if c["low"] < level and c["close"] > level:
+                    found = ("BUY", level, "sell-side sweep")
+                    break
+        if found:
+            direction, level, typ = found
+            conf = engine.m5_confirmation(m5[:i+1], direction)
+            sweeps.append({
+                "time": c["openTime"],
+                "direction": direction,
+                "level": round(level, 3),
+                "type": typ,
+                "close": c["close"],
+                "confirmation": conf,
+            })
+    return sweeps
+
+
 def main():
-    m5 = [x for x in load("xauusd_5m.json") if x.get("isOpen") is False]
-    m15 = [x for x in load("xauusd_15m.json") if x.get("isOpen") is False]
-    h1 = [x for x in load("xauusd_1h.json") if x.get("isOpen") is False]
-
-    m5.sort(key=lambda x: x["openTime"])
-    m15.sort(key=lambda x: x["openTime"])
-    h1.sort(key=lambda x: x["openTime"])
-
+    m5 = sorted([x for x in load("xauusd_5m.json") if not x.get("isOpen")], key=lambda x: x["openTime"])
+    m15 = sorted([x for x in load("xauusd_15m.json") if not x.get("isOpen")], key=lambda x: x["openTime"])
+    h1 = sorted([x for x in load("xauusd_1h.json") if not x.get("isOpen")], key=lambda x: x["openTime"])
     engine = load_engine()
-    signals = []
-    reason_counts = {}
 
+    signals, reasons = [], {}
     for i in range(len(m5)):
-        current = m5[i]
-        t = parse_time(current["openTime"])
-
-        # Only expose candles whose full interval has closed by this M5 candle.
-        m15_cut = t - timedelta(minutes=15)
-        h1_cut = t - timedelta(hours=1)
-        ctx15 = [x for x in m15 if parse_time(x["openTime"]) <= m15_cut]
-        ctx1 = [x for x in h1 if parse_time(x["openTime"]) <= h1_cut]
-        ctx5 = m5[: i + 1]
-
-        result = engine.analyze({
-            "intervals": {
-                "5m": {"bars": ctx5},
-                "15m": {"bars": ctx15},
-                "1h": {"bars": ctx1},
-            }
-        })
-
-        status = result.get("status", "UNKNOWN")
-        if status == "SETUP FOUND":
-            outcome = evaluate_outcome(result, m5[i + 1 :])
-            signals.append({**result, "outcome": outcome})
+        t = parse_time(m5[i]["openTime"])
+        ctx15 = [x for x in m15 if parse_time(x["openTime"]) <= t - timedelta(minutes=15)]
+        ctx1 = [x for x in h1 if parse_time(x["openTime"]) <= t - timedelta(hours=1)]
+        result = engine.analyze({"intervals":{"5m":{"bars":m5[:i+1]},"15m":{"bars":ctx15},"1h":{"bars":ctx1}}})
+        if result.get("status") == "SETUP FOUND":
+            signals.append({**result, "outcome": evaluate_outcome(result, m5[i+1:])})
         else:
-            reason = result.get("reason", "unknown")
-            reason_counts[reason] = reason_counts.get(reason, 0) + 1
+            reason = result.get("reason","unknown")
+            reasons[reason] = reasons.get(reason,0)+1
 
-    outcomes = {}
-    for s in signals:
-        outcomes[s["outcome"]] = outcomes.get(s["outcome"], 0) + 1
-
-    completed = sum(v for k, v in outcomes.items() if k in {"TP", "SL", "AMBIGUOUS_SAME_CANDLE"})
-    wins = outcomes.get("TP", 0)
-    losses = outcomes.get("SL", 0)
+    sweeps = audit_sweep(engine, m5, m15, h1)
+    by_conf = {}
+    for s in sweeps:
+        key = "confirmed" if s["confirmation"] else "unconfirmed"
+        by_conf[key] = by_conf.get(key,0)+1
 
     result = {
-        "status": "COMPLETED",
-        "data": {
-            "m5": len(m5),
-            "m15": len(m15),
-            "h1": len(h1),
-            "first_m5": m5[0]["openTime"] if m5 else None,
-            "last_m5": m5[-1]["openTime"] if m5 else None,
-        },
-        "signals": len(signals),
-        "outcomes": outcomes,
-        "completed_trades": completed,
-        "tp_count": wins,
-        "sl_count": losses,
-        "ambiguous_count": outcomes.get("AMBIGUOUS_SAME_CANDLE", 0),
-        "win_rate_excluding_ambiguous": (wins / (wins + losses) * 100) if wins + losses else None,
-        "no_trade_reasons": reason_counts,
-        "signal_details": signals,
-        "notes": [
-            "Replay uses only information available at each closed M5 candle.",
-            "15m/H1 candles are included only after their full interval has closed.",
-            "No broker execution, spread, slippage, or position sizing is simulated.",
-            "If SL and TP occur in the same future M5 candle, the result is marked ambiguous rather than choosing a winner.",
-            "This dataset is short and is not sufficient to establish long-run strategy performance."
-        ],
+        "status":"COMPLETED",
+        "data":{"m5":len(m5),"m15":len(m15),"h1":len(h1),
+                "first_m5":m5[0]["openTime"] if m5 else None,
+                "last_m5":m5[-1]["openTime"] if m5 else None},
+        "signals":len(signals),
+        "sweep_audit":{"total_sweeps":len(sweeps),"by_confirmation":by_conf,"details":sweeps},
+        "no_trade_reasons":reasons,
+        "signal_details":signals,
+        "notes":[
+            "Sweep audit uses only M15 liquidity levels available before each M5 candle.",
+            "This is diagnostic; it does not claim long-run profitability.",
+            "The dataset is short."
+        ]
     }
+    OUT.parent.mkdir(parents=True,exist_ok=True)
+    OUT.write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding="utf-8")
+    print(json.dumps(result,ensure_ascii=False,indent=2))
 
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(json.dumps(result, ensure_ascii=False, indent=2))
 
-
-if __name__ == "__main__":
+if __name__=="__main__":
     main()
