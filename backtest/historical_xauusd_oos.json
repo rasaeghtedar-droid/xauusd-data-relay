@@ -1,0 +1,371 @@
+{
+  "period": {
+    "development": "2026-03 through 2026-07",
+    "out_of_sample": "2026-08-01 through 2026-09-25",
+    "note": "Rules were not changed for this evaluation; August-September trades are evaluated as a locked holdout."
+  },
+  "base": {
+    "overall": {
+      "trades": 335,
+      "tp": 113,
+      "sl": 221,
+      "win_rate": 33.83,
+      "net_R": 86.67,
+      "avg_RR": 3.02
+    },
+    "direction": {
+      "BUY": {
+        "trades": 180,
+        "tp": 52,
+        "sl": 128,
+        "win_rate": 28.89,
+        "net_R": 5.32,
+        "avg_RR": 2.97
+      },
+      "SELL": {
+        "trades": 155,
+        "tp": 61,
+        "sl": 93,
+        "win_rate": 39.61,
+        "net_R": 81.35,
+        "avg_RR": 3.08
+      }
+    },
+    "confirmation": {
+      "bearish continuation": {
+        "trades": 66,
+        "tp": 26,
+        "sl": 40,
+        "win_rate": 39.39,
+        "net_R": 33.27,
+        "avg_RR": 2.88
+      },
+      "bearish displacement": {
+        "trades": 18,
+        "tp": 7,
+        "sl": 11,
+        "win_rate": 38.89,
+        "net_R": 7.2,
+        "avg_RR": 3.57
+      },
+      "bullish continuation": {
+        "trades": 70,
+        "tp": 21,
+        "sl": 49,
+        "win_rate": 30.0,
+        "net_R": 2.06,
+        "avg_RR": 2.93
+      },
+      "bullish displacement": {
+        "trades": 24,
+        "tp": 6,
+        "sl": 18,
+        "win_rate": 25.0,
+        "net_R": -1.48,
+        "avg_RR": 2.95
+      },
+      "short-term bearish structure break": {
+        "trades": 71,
+        "tp": 28,
+        "sl": 42,
+        "win_rate": 40.0,
+        "net_R": 40.88,
+        "avg_RR": 3.14
+      },
+      "short-term bullish structure break": {
+        "trades": 86,
+        "tp": 25,
+        "sl": 61,
+        "win_rate": 29.07,
+        "net_R": 4.74,
+        "avg_RR": 3.02
+      }
+    },
+    "h1_bias": {
+      "BEARISH": {
+        "trades": 57,
+        "tp": 16,
+        "sl": 41,
+        "win_rate": 28.07,
+        "net_R": -0.46,
+        "avg_RR": 3.1
+      },
+      "BULLISH": {
+        "trades": 44,
+        "tp": 13,
+        "sl": 31,
+        "win_rate": 29.55,
+        "net_R": 6.98,
+        "avg_RR": 3.32
+      },
+      "NEUTRAL": {
+        "trades": 234,
+        "tp": 84,
+        "sl": 149,
+        "win_rate": 36.05,
+        "net_R": 80.15,
+        "avg_RR": 2.95
+      }
+    },
+    "session_utc": {
+      "Asia": {
+        "trades": 110,
+        "tp": 42,
+        "sl": 67,
+        "win_rate": 38.53,
+        "net_R": 56.7,
+        "avg_RR": 3.02
+      },
+      "London": {
+        "trades": 60,
+        "tp": 16,
+        "sl": 44,
+        "win_rate": 26.67,
+        "net_R": -0.35,
+        "avg_RR": 3.16
+      },
+      "New York": {
+        "trades": 77,
+        "tp": 26,
+        "sl": 51,
+        "win_rate": 33.77,
+        "net_R": 9.49,
+        "avg_RR": 2.61
+      },
+      "New York late": {
+        "trades": 57,
+        "tp": 18,
+        "sl": 39,
+        "win_rate": 31.58,
+        "net_R": 9.11,
+        "avg_RR": 3.46
+      },
+      "Off-session": {
+        "trades": 31,
+        "tp": 11,
+        "sl": 20,
+        "win_rate": 35.48,
+        "net_R": 11.72,
+        "avg_RR": 2.99
+      }
+    },
+    "liquidity": {
+      "buy-side sweep": {
+        "trades": 155,
+        "tp": 61,
+        "sl": 93,
+        "win_rate": 39.61,
+        "net_R": 81.35,
+        "avg_RR": 3.08
+      },
+      "sell-side sweep": {
+        "trades": 180,
+        "tp": 52,
+        "sl": 128,
+        "win_rate": 28.89,
+        "net_R": 5.32,
+        "avg_RR": 2.97
+      }
+    },
+    "month": {
+      "2026-08": {
+        "trades": 178,
+        "tp": 57,
+        "sl": 120,
+        "win_rate": 32.2,
+        "net_R": 41.71,
+        "avg_RR": 2.98
+      },
+      "2026-09": {
+        "trades": 157,
+        "tp": 56,
+        "sl": 101,
+        "win_rate": 35.67,
+        "net_R": 44.96,
+        "avg_RR": 3.07
+      }
+    }
+  },
+  "target_cap_2_5": {
+    "overall": {
+      "trades": 192,
+      "tp": 80,
+      "sl": 111,
+      "win_rate": 41.88,
+      "net_R": 67.72,
+      "avg_RR": 2.23
+    },
+    "direction": {
+      "BUY": {
+        "trades": 110,
+        "tp": 38,
+        "sl": 72,
+        "win_rate": 34.55,
+        "net_R": 12.01,
+        "avg_RR": 2.22
+      },
+      "SELL": {
+        "trades": 82,
+        "tp": 42,
+        "sl": 39,
+        "win_rate": 51.85,
+        "net_R": 55.71,
+        "avg_RR": 2.25
+      }
+    },
+    "confirmation": {
+      "bearish continuation": {
+        "trades": 40,
+        "tp": 21,
+        "sl": 19,
+        "win_rate": 52.5,
+        "net_R": 28.61,
+        "avg_RR": 2.25
+      },
+      "bearish displacement": {
+        "trades": 7,
+        "tp": 3,
+        "sl": 4,
+        "win_rate": 42.86,
+        "net_R": 2.93,
+        "avg_RR": 2.34
+      },
+      "bullish continuation": {
+        "trades": 48,
+        "tp": 19,
+        "sl": 29,
+        "win_rate": 39.58,
+        "net_R": 12.74,
+        "avg_RR": 2.22
+      },
+      "bullish displacement": {
+        "trades": 13,
+        "tp": 4,
+        "sl": 9,
+        "win_rate": 30.77,
+        "net_R": -0.15,
+        "avg_RR": 2.22
+      },
+      "short-term bearish structure break": {
+        "trades": 35,
+        "tp": 18,
+        "sl": 16,
+        "win_rate": 52.94,
+        "net_R": 24.17,
+        "avg_RR": 2.23
+      },
+      "short-term bullish structure break": {
+        "trades": 49,
+        "tp": 15,
+        "sl": 34,
+        "win_rate": 30.61,
+        "net_R": -0.58,
+        "avg_RR": 2.22
+      }
+    },
+    "h1_bias": {
+      "BEARISH": {
+        "trades": 36,
+        "tp": 14,
+        "sl": 22,
+        "win_rate": 38.89,
+        "net_R": 8.63,
+        "avg_RR": 2.2
+      },
+      "BULLISH": {
+        "trades": 18,
+        "tp": 9,
+        "sl": 9,
+        "win_rate": 50.0,
+        "net_R": 10.8,
+        "avg_RR": 2.25
+      },
+      "NEUTRAL": {
+        "trades": 138,
+        "tp": 57,
+        "sl": 80,
+        "win_rate": 41.61,
+        "net_R": 48.29,
+        "avg_RR": 2.24
+      }
+    },
+    "session_utc": {
+      "Asia": {
+        "trades": 58,
+        "tp": 27,
+        "sl": 30,
+        "win_rate": 47.37,
+        "net_R": 30.9,
+        "avg_RR": 2.23
+      },
+      "London": {
+        "trades": 45,
+        "tp": 15,
+        "sl": 30,
+        "win_rate": 33.33,
+        "net_R": 2.64,
+        "avg_RR": 2.22
+      },
+      "New York": {
+        "trades": 51,
+        "tp": 22,
+        "sl": 29,
+        "win_rate": 43.14,
+        "net_R": 19.9,
+        "avg_RR": 2.23
+      },
+      "New York late": {
+        "trades": 21,
+        "tp": 11,
+        "sl": 10,
+        "win_rate": 52.38,
+        "net_R": 14.94,
+        "avg_RR": 2.29
+      },
+      "Off-session": {
+        "trades": 17,
+        "tp": 5,
+        "sl": 12,
+        "win_rate": 29.41,
+        "net_R": -0.66,
+        "avg_RR": 2.21
+      }
+    },
+    "liquidity": {
+      "buy-side sweep": {
+        "trades": 82,
+        "tp": 42,
+        "sl": 39,
+        "win_rate": 51.85,
+        "net_R": 55.71,
+        "avg_RR": 2.25
+      },
+      "sell-side sweep": {
+        "trades": 110,
+        "tp": 38,
+        "sl": 72,
+        "win_rate": 34.55,
+        "net_R": 12.01,
+        "avg_RR": 2.22
+      }
+    },
+    "month": {
+      "2026-08": {
+        "trades": 97,
+        "tp": 39,
+        "sl": 57,
+        "win_rate": 40.62,
+        "net_R": 29.91,
+        "avg_RR": 2.23
+      },
+      "2026-09": {
+        "trades": 95,
+        "tp": 41,
+        "sl": 54,
+        "win_rate": 43.16,
+        "net_R": 37.81,
+        "avg_RR": 2.23
+      }
+    }
+  }
+}
