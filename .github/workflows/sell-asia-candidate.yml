@@ -1,0 +1,24 @@
+name: XAUUSD SELL Asia Candidate Comparison
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/sell_asia_candidate_comparison.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xauusd-sell-asia-candidate-comparison
+          path: backtest/sell-asia-candidate-comparison.json
+      - run: |
+          git config user.name "xauusd-data-relay"
+          git config user.email "actions@users.noreply.github.com"
+          git add backtest/sell-asia-candidate-comparison.json
+          git diff --cached --quiet || git commit -m "Add SELL Asia candidate comparison"
+          git pull --rebase origin main
+          git push
