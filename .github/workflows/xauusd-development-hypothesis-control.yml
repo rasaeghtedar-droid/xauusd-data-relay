@@ -1,0 +1,28 @@
+name: XAUUSD Development Hypothesis Control
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  control:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run development control analysis
+        run: python3 scripts/hypothesis_control_development.py
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: xauusd-development-hypothesis-control
+          path: backtest/hypothesis_control_development.json
+      - name: Commit report
+        run: |
+          git config user.name "xauusd-data-relay"
+          git config user.email "actions@users.noreply.github.com"
+          git add backtest/hypothesis_control_development.json
+          git diff --cached --quiet || git commit -m "Add XAUUSD development hypothesis control"
+          git pull --rebase origin main
+          git push
