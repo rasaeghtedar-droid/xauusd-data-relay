@@ -18,7 +18,7 @@ jobs:
         run: |
           rm -rf /tmp/dukascopy
           mkdir -p /tmp/dukascopy
-          npx -y dukascopy-node -i xauusd -from 2026-08-01 -to 2026-09-29 -t m5 -f csv --volumes true --directory /tmp/dukascopy --batch-size 10 --batch-pause 1000 --retries 3
+          npx -y dukascopy-node -i xauusd -from 2026-08-01 -to 2026-09-29 -t m5 -f csv -v -dir /tmp/dukascopy -bs 10 -bp 1000 -r 3
           CSV_FILE=$(find /tmp/dukascopy -type f -name '*.csv' | head -n 1)
           test -n "$CSV_FILE"
           cp "$CSV_FILE" /tmp/dukascopy/xauusd_m5.csv
