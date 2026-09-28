@@ -1,0 +1,106 @@
+{
+  "locked_rule": {
+    "direction": "SELL",
+    "session": "Asia UTC 00:00-06:59",
+    "target_cap_RR": 2.5
+  },
+  "periods": {
+    "P1_2026-03_to_2026-05": {
+      "all": {
+        "trades": 278,
+        "tp": 91,
+        "sl": 185,
+        "win_rate": 32.97,
+        "net_R": 17.2,
+        "avg_RR": 2.23,
+        "max_drawdown_R": 22.13
+      },
+      "sell_only": {
+        "trades": 137,
+        "tp": 54,
+        "sl": 83,
+        "win_rate": 39.42,
+        "net_R": 36.44,
+        "avg_RR": 2.23,
+        "max_drawdown_R": 8.41
+      },
+      "sell_asia_locked": {
+        "trades": 36,
+        "tp": 15,
+        "sl": 21,
+        "win_rate": 41.67,
+        "net_R": 12.46,
+        "avg_RR": 2.25,
+        "max_drawdown_R": 3.0
+      }
+    },
+    "P2_2026-06_to_2026-07": {
+      "all": {
+        "trades": 235,
+        "tp": 63,
+        "sl": 170,
+        "win_rate": 27.04,
+        "net_R": -30.22,
+        "avg_RR": 2.23,
+        "max_drawdown_R": 35.56
+      },
+      "sell_only": {
+        "trades": 107,
+        "tp": 37,
+        "sl": 68,
+        "win_rate": 35.24,
+        "net_R": 13.49,
+        "avg_RR": 2.22,
+        "max_drawdown_R": 11.19
+      },
+      "sell_asia_locked": {
+        "trades": 28,
+        "tp": 12,
+        "sl": 15,
+        "win_rate": 44.44,
+        "net_R": 11.6,
+        "avg_RR": 2.23,
+        "max_drawdown_R": 4.0
+      }
+    },
+    "P3_2026-08_to_2026-09": {
+      "all": {
+        "trades": 210,
+        "tp": 84,
+        "sl": 125,
+        "win_rate": 40.19,
+        "net_R": 62.55,
+        "avg_RR": 2.23,
+        "max_drawdown_R": 8.0
+      },
+      "sell_only": {
+        "trades": 90,
+        "tp": 45,
+        "sl": 44,
+        "win_rate": 50.56,
+        "net_R": 57.34,
+        "avg_RR": 2.25,
+        "max_drawdown_R": 5.0
+      },
+      "sell_asia_locked": {
+        "trades": 23,
+        "tp": 14,
+        "sl": 8,
+        "win_rate": 63.64,
+        "net_R": 23.54,
+        "avg_RR": 2.23,
+        "max_drawdown_R": 5.0
+      }
+    }
+  },
+  "aggregate_locked_candidate": {
+    "trades": 87,
+    "tp": 41,
+    "sl": 44,
+    "win_rate": 48.24,
+    "net_R": 47.6,
+    "avg_RR": 2.24,
+    "max_drawdown_R": 6.72
+  },
+  "note": "Candidate was locked before this run; no threshold or session boundary was optimized from these results. This is validation, not proof of future performance."
+}
