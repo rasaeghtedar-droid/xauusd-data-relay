@@ -1,0 +1,43 @@
+{
+  "period": "2026-08 through 2026-09",
+  "all": {
+    "trades": 210,
+    "tp": 84,
+    "sl": 125,
+    "win_rate": 40.19,
+    "net_R": 62.55,
+    "avg_RR": 2.23
+  },
+  "score_2": {
+    "trades": 113,
+    "tp": 47,
+    "sl": 66,
+    "win_rate": 41.59,
+    "net_R": 39.0,
+    "avg_RR": 2.24
+  },
+  "score_3_plus": {
+    "trades": 97,
+    "tp": 37,
+    "sl": 59,
+    "win_rate": 38.54,
+    "net_R": 23.55,
+    "avg_RR": 2.23
+  },
+  "score_3": {
+    "trades": 96,
+    "tp": 37,
+    "sl": 58,
+    "win_rate": 38.95,
+    "net_R": 24.55,
+    "avg_RR": 2.23
+  },
+  "score_4": {
+    "trades": 1,
+    "tp": 0,
+    "sl": 1,
+    "win_rate": 0.0,
+    "net_R": -1,
+    "avg_RR": 2.1
+  }
+}
