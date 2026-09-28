@@ -1,0 +1,22 @@
+name: Liquidity Hunter Target Cap Experiment
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  experiment:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run experiment
+        run: python3 scripts/liquidity_hunter_target_cap_backtest.py
+      - name: Commit result
+        run: |
+          git config user.name "xauusd-data-relay"
+          git config user.email "actions@users.noreply.github.com"
+          git add backtest/liquidity_hunter_target_cap_results.json
+          git diff --cached --quiet || git commit -m "Add target cap experiment result"
+          git push

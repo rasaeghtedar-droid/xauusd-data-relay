@@ -13,6 +13,7 @@ from typing import Any
 
 DATA_PATH = Path(__file__).resolve().parents[1] / "data" / "xauusd_analysis.json"
 MIN_RR = 2.0
+MAX_TARGET_RR = 2.50  # EXPERIMENT ONLY
 SWING_LOOKBACK = 3
 LIQUIDITY_LOOKBACK = 30
 LEVEL_TOLERANCE = 1.5
@@ -184,7 +185,7 @@ def build_trade(sweep: dict[str, Any], m5: list[dict[str, Any]], m15: list[dict[
             return None
         viable = [
             x for x in candidates
-            if (x - entry) / (entry - sl) >= MIN_RR
+            if MIN_RR <= (x - entry) / (entry - sl) <= MAX_TARGET_RR
         ]
         if not viable:
             return None
@@ -202,7 +203,7 @@ def build_trade(sweep: dict[str, Any], m5: list[dict[str, Any]], m15: list[dict[
             return None
         viable = [
             x for x in candidates
-            if (entry - x) / (sl - entry) >= MIN_RR
+            if MIN_RR <= (entry - x) / (sl - entry) <= MAX_TARGET_RR
         ]
         if not viable:
             return None
