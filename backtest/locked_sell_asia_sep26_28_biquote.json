@@ -1,0 +1,38 @@
+{
+  "locked_rule": {
+    "direction": "SELL",
+    "session": "Asia UTC 00:00-06:59",
+    "target_cap_RR": 2.5
+  },
+  "source": "Biquote XAUUSD OHLC API",
+  "source_url": "https://biquote.io/api/XAUUSD/ohlc",
+  "source_period": {
+    "data_start": "2026-08-01T00:00:00+00:00",
+    "evaluation_start": "2026-09-26T00:00:00+00:00",
+    "requested_end": "2026-09-28T23:59:59+00:00"
+  },
+  "data": {
+    "m5": 288,
+    "m15": 95,
+    "h1": 22,
+    "first_m5": "2026-09-25T15:45:00Z",
+    "last_m5": "2026-09-28T16:50:00Z"
+  },
+  "result": {
+    "trades": 0,
+    "tp": 0,
+    "sl": 0,
+    "win_rate": 0,
+    "net_R": 0,
+    "avg_RR": 0,
+    "max_drawdown_R": 0
+  },
+  "all_engine_signals": 0,
+  "no_trade_reasons": {
+    "no fresh liquidity sweep on latest M5 candle": 194,
+    "sweep found but no M5 reversal confirmation": 26,
+    "no logical target with minimum 1:2 R:R": 5
+  },
+  "candidate_details": [],
+  "note": "Locked forward validation on Biquote; no parameter tuning. Cross-source relative to the prior GitHub CSV validation source; Biquote itself is also used by the relay."
+}
