@@ -1,0 +1,29 @@
+name: Liquidity Hunter V2 Experiment
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  experiment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run V2 experiment
+        run: python3 scripts/liquidity_hunter_v2_experiment.py
+      - name: Upload V2 report
+        uses: actions/upload-artifact@v4
+        with:
+          name: liquidity-hunter-v2-experiment
+          path: backtest/liquidity_hunter_v2_experiment.json
+      - name: Commit V2 report
+        run: |
+          git config user.name "xauusd-data-relay"
+          git config user.email "actions@users.noreply.github.com"
+          git add backtest/liquidity_hunter_v2_experiment.json
+          git diff --cached --quiet || git commit -m "Add Liquidity Hunter V2 experiment result"
+          git pull --rebase origin main
+          git push
