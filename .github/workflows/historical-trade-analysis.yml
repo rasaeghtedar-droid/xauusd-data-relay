@@ -1,0 +1,23 @@
+name: Historical XAUUSD Trade Analysis
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Analyze historical trades
+        run: python3 scripts/analyze_historical_trades.py
+      - name: Commit analysis
+        run: |
+          git config user.name "xauusd-data-relay"
+          git config user.email "actions@users.noreply.github.com"
+          git add backtest/historical_trade_analysis.json
+          git diff --cached --quiet || git commit -m "Add historical trade analysis"
+          git pull --rebase origin main
+          git push
