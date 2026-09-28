@@ -1,0 +1,127 @@
+{
+  "period": "2026-08 through 2026-09",
+  "session_direction": {
+    "('BUY', 'Asia')": {
+      "trades": 40,
+      "tp": 13,
+      "sl": 27,
+      "win_rate": 32.5,
+      "net_R": 2.36,
+      "avg_RR": 2.23
+    },
+    "('BUY', 'London')": {
+      "trades": 28,
+      "tp": 9,
+      "sl": 19,
+      "win_rate": 32.14,
+      "net_R": 0.54,
+      "avg_RR": 2.19
+    },
+    "('BUY', 'New York')": {
+      "trades": 31,
+      "tp": 11,
+      "sl": 20,
+      "win_rate": 35.48,
+      "net_R": 4.07,
+      "avg_RR": 2.23
+    },
+    "('BUY', 'New York late')": {
+      "trades": 12,
+      "tp": 4,
+      "sl": 8,
+      "win_rate": 33.33,
+      "net_R": 0.83,
+      "avg_RR": 2.29
+    },
+    "('BUY', 'Off-session')": {
+      "trades": 9,
+      "tp": 2,
+      "sl": 7,
+      "win_rate": 22.22,
+      "net_R": -2.59,
+      "avg_RR": 2.16
+    },
+    "('SELL', 'Asia')": {
+      "trades": 23,
+      "tp": 14,
+      "sl": 8,
+      "win_rate": 63.64,
+      "net_R": 23.54,
+      "avg_RR": 2.23
+    },
+    "('SELL', 'London')": {
+      "trades": 21,
+      "tp": 8,
+      "sl": 13,
+      "win_rate": 38.1,
+      "net_R": 4.36,
+      "avg_RR": 2.27
+    },
+    "('SELL', 'New York')": {
+      "trades": 26,
+      "tp": 12,
+      "sl": 14,
+      "win_rate": 46.15,
+      "net_R": 13.12,
+      "avg_RR": 2.24
+    },
+    "('SELL', 'New York late')": {
+      "trades": 12,
+      "tp": 8,
+      "sl": 4,
+      "win_rate": 66.67,
+      "net_R": 14.39,
+      "avg_RR": 2.29
+    },
+    "('SELL', 'Off-session')": {
+      "trades": 8,
+      "tp": 3,
+      "sl": 5,
+      "win_rate": 37.5,
+      "net_R": 1.93,
+      "avg_RR": 2.26
+    }
+  },
+  "session": {
+    "Asia": {
+      "trades": 63,
+      "tp": 27,
+      "sl": 35,
+      "win_rate": 43.55,
+      "net_R": 25.9,
+      "avg_RR": 2.23
+    },
+    "London": {
+      "trades": 49,
+      "tp": 17,
+      "sl": 32,
+      "win_rate": 34.69,
+      "net_R": 4.9,
+      "avg_RR": 2.22
+    },
+    "New York": {
+      "trades": 57,
+      "tp": 23,
+      "sl": 34,
+      "win_rate": 40.35,
+      "net_R": 17.19,
+      "avg_RR": 2.23
+    },
+    "New York late": {
+      "trades": 24,
+      "tp": 12,
+      "sl": 12,
+      "win_rate": 50.0,
+      "net_R": 15.22,
+      "avg_RR": 2.29
+    },
+    "Off-session": {
+      "trades": 17,
+      "tp": 5,
+      "sl": 12,
+      "win_rate": 29.41,
+      "net_R": -0.66,
+      "avg_RR": 2.21
+    }
+  }
+}
