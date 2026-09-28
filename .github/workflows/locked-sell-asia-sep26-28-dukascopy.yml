@@ -1,0 +1,41 @@
+name: XAUUSD Locked SELL Asia Sep 26-28 Dukascopy Forward
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Download Dukascopy XAUUSD M5
+        run: |
+          rm -rf /tmp/dukascopy
+          mkdir -p /tmp/dukascopy
+          npx -y dukascopy-node -i xauusd -from 2026-08-01 -to 2026-09-29 -t m5 -f csv --volumes true --directory /tmp/dukascopy --batch-size 10 --batch-pause 1000 --retries 3
+          CSV_FILE=$(find /tmp/dukascopy -type f -name '*.csv' | head -n 1)
+          test -n "$CSV_FILE"
+          cp "$CSV_FILE" /tmp/dukascopy/xauusd_m5.csv
+          echo "Downloaded: $CSV_FILE"
+          head -n 3 /tmp/dukascopy/xauusd_m5.csv
+          tail -n 2 /tmp/dukascopy/xauusd_m5.csv
+      - name: Run locked forward validation
+        run: python3 scripts/locked_sell_asia_sep26_28_dukascopy.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xauusd-locked-sell-asia-sep26-28-dukascopy
+          path: backtest/locked_sell_asia_sep26_28_dukascopy.json
+      - name: Commit result
+        run: |
+          git config user.name "xauusd-data-relay"
+          git config user.email "actions@users.noreply.github.com"
+          git add backtest/locked_sell_asia_sep26_28_dukascopy.json
+          git diff --cached --quiet || git commit -m "Add Sep 26-28 Dukascopy forward validation"
+          git pull --rebase origin main
+          git push
