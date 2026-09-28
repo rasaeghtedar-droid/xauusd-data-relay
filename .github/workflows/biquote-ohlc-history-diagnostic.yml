@@ -1,0 +1,27 @@
+name: Biquote XAUUSD OHLC History Diagnostic
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test historical OHLC range access
+        run: python3 scripts/biquote_ohlc_history_diagnostic.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: biquote-xauusd-ohlc-history-diagnostic
+          path: backtest/biquote_ohlc_history_diagnostic.json
+      - name: Commit result
+        run: |
+          git config user.name "xauusd-data-relay"
+          git config user.email "actions@users.noreply.github.com"
+          git add backtest/biquote_ohlc_history_diagnostic.json
+          git diff --cached --quiet || git commit -m "Add Biquote OHLC history diagnostic"
+          git pull --rebase origin main
+          git push
