@@ -83,7 +83,9 @@ def run(m5,m15,h1,mod):
 def main():
     m5=load_bars(); m15=aggregate(m5,15); h1=aggregate(m5,60)
     base=engine(ROOT/"liquidity_hunter"/"liquidity_hunter.py","base")
-    cap=engine(ROOT/"liquidity_hunter"/"liquidity_hunter_experiment.py","cap")
+    # The main engine currently uses the 2.5 target cap. Disable it for the uncapped A/B variant.
+    base.MAX_TARGET_RR = 999999.0
+    cap=engine(ROOT/"liquidity_hunter"/"liquidity_hunter.py","cap")
     result={"source":URL,"data":{"m5":len(m5),"m15":len(m15),"h1":len(h1),
       "first_m5":m5[0]["openTime"],"last_m5":m5[-1]["openTime"]},
       "base":run(m5,m15,h1,base),"target_cap_2_5":run(m5,m15,h1,cap)}
