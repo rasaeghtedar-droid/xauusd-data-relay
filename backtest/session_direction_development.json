@@ -1,0 +1,93 @@
+{
+  "period": "2026-03 through 2026-07",
+  "session_direction": {
+    "('BUY', 'Asia')": {
+      "trades": 76,
+      "tp": 20,
+      "sl": 55,
+      "win_rate": 26.67,
+      "net_R": -10.4,
+      "avg_RR": 2.23
+    },
+    "('BUY', 'London')": {
+      "trades": 77,
+      "tp": 19,
+      "sl": 58,
+      "win_rate": 24.68,
+      "net_R": -14.92,
+      "avg_RR": 2.24
+    },
+    "('BUY', 'New York')": {
+      "trades": 52,
+      "tp": 12,
+      "sl": 40,
+      "win_rate": 23.08,
+      "net_R": -13.18,
+      "avg_RR": 2.23
+    },
+    "('BUY', 'New York late')": {
+      "trades": 36,
+      "tp": 8,
+      "sl": 27,
+      "win_rate": 22.86,
+      "net_R": -9.42,
+      "avg_RR": 2.22
+    },
+    "('BUY', 'Off-session')": {
+      "trades": 28,
+      "tp": 4,
+      "sl": 24,
+      "win_rate": 14.29,
+      "net_R": -15.03,
+      "avg_RR": 2.22
+    },
+    "('SELL', 'Asia')": {
+      "trades": 64,
+      "tp": 27,
+      "sl": 36,
+      "win_rate": 42.86,
+      "net_R": 24.06,
+      "avg_RR": 2.24
+    },
+    "('SELL', 'London')": {
+      "trades": 71,
+      "tp": 26,
+      "sl": 45,
+      "win_rate": 36.62,
+      "net_R": 12.32,
+      "avg_RR": 2.25
+    },
+    "('SELL', 'New York')": {
+      "trades": 63,
+      "tp": 23,
+      "sl": 40,
+      "win_rate": 36.51,
+      "net_R": 10.11,
+      "avg_RR": 2.19
+    },
+    "('SELL', 'New York late')": {
+      "trades": 34,
+      "tp": 12,
+      "sl": 22,
+      "win_rate": 35.29,
+      "net_R": 4.3,
+      "avg_RR": 2.22
+    },
+    "('SELL', 'Off-session')": {
+      "trades": 12,
+      "tp": 3,
+      "sl": 8,
+      "win_rate": 27.27,
+      "net_R": -0.86,
+      "avg_RR": 2.2
+    }
+  },
+  "overall": {
+    "trades": 513,
+    "tp": 154,
+    "sl": 355,
+    "win_rate": 30.26,
+    "net_R": -13.02,
+    "avg_RR": 2.23
+  }
+}
