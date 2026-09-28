@@ -1,0 +1,25 @@
+name: Liquidity Hunter V3 Quality Score
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/liquidity_hunter_v3_quality_score.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: liquidity-hunter-v3-quality-score
+          path: backtest/liquidity_hunter_v3_quality_score.json
+      - run: |
+          git config user.name "xauusd-data-relay"
+          git config user.email "actions@users.noreply.github.com"
+          git add backtest/liquidity_hunter_v3_quality_score.json
+          git diff --cached --quiet || git commit -m "Add Liquidity Hunter V3 quality score diagnostic"
+          git pull --rebase origin main
+          git push
