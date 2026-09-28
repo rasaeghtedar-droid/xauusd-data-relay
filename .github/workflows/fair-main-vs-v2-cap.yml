@@ -1,0 +1,29 @@
+name: Fair Main vs V2 Cap Comparison
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run fair comparison
+        run: python3 scripts/fair_main_vs_v2_cap.py
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: fair-main-vs-v2-cap
+          path: backtest/fair_main_vs_v2_cap.json
+      - name: Commit report
+        run: |
+          git config user.name "xauusd-data-relay"
+          git config user.email "actions@users.noreply.github.com"
+          git add backtest/fair_main_vs_v2_cap.json
+          git diff --cached --quiet || git commit -m "Add fair main versus V2 comparison"
+          git pull --rebase origin main
+          git push
