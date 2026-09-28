@@ -1,0 +1,24 @@
+name: XAUUSD Direction Specific Quality OOS
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/direction_specific_quality_oos.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xauusd-direction-specific-quality-oos
+          path: backtest/direction_specific_quality_oos.json
+      - run: |
+          git config user.name "xauusd-data-relay"
+          git config user.email "actions@users.noreply.github.com"
+          git add backtest/direction_specific_quality_oos.json
+          git diff --cached --quiet || git commit -m "Add direction-specific quality OOS analysis"
+          git pull --rebase origin main
+          git push
