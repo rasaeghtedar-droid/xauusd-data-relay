@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 import csv, importlib.util, json, urllib.request
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -86,9 +87,25 @@ def main():
     # The main engine currently uses the 2.5 target cap. Disable it for the uncapped A/B variant.
     base.MAX_TARGET_RR = 999999.0
     cap=engine(ROOT/"liquidity_hunter"/"liquidity_hunter.py","cap")
+    base_result=run(m5,m15,h1,base)
+    cap_result=run(m5,m15,h1,cap)
+    def monthly(trades):
+        groups=defaultdict(list)
+        for x in trades:
+            groups[x["candle_time"][:7]].append(x)
+        out={}
+        for month, xs in sorted(groups.items()):
+            tp=sum(x["outcome"]=="TP" for x in xs); sl=sum(x["outcome"]=="SL" for x in xs)
+            net=sum((x["rr"] if x["outcome"]=="TP" else -1 if x["outcome"]=="SL" else 0) for x in xs)
+            out[month]={"signals":len(xs),"tp":tp,"sl":sl,
+                        "win_rate":round(tp/(tp+sl)*100,2) if tp+sl else 0,
+                        "net_R":round(net,2)}
+        return out
     result={"source":URL,"data":{"m5":len(m5),"m15":len(m15),"h1":len(h1),
       "first_m5":m5[0]["openTime"],"last_m5":m5[-1]["openTime"]},
-      "base":run(m5,m15,h1,base),"target_cap_2_5":run(m5,m15,h1,cap)}
+      "base":base_result,"target_cap_2_5":cap_result,
+      "monthly":{"base":monthly(base_result["details"]),
+                 "target_cap_2_5":monthly(cap_result["details"])}}
     OUT.parent.mkdir(parents=True,exist_ok=True); OUT.write_text(json.dumps(result,ensure_ascii=False),encoding="utf-8")
     print(json.dumps({k:(v if k=="data" else {x:v[x] for x in ("signals","tp","sl","win_rate","net_R")}) for k,v in result.items() if k!="source"},indent=2))
 
