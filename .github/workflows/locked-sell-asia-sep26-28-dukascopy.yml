@@ -1,4 +1,4 @@
-name: XAUUSD Locked SELL Asia Sep 26-28 Dukascopy Forward
+name: XAUUSD Locked SELL Asia Sep 10 Dukascopy Forward
 
 on:
   workflow_dispatch:
@@ -18,7 +18,7 @@ jobs:
         run: |
           rm -rf /tmp/dukascopy
           mkdir -p /tmp/dukascopy
-          npx -y dukascopy-node -i xauusd -from 2026-09-20 -to 2026-09-29 -t m5 -f csv -v -dir /tmp/dukascopy -bs 1 -bp 3000 -r 8 -rp 15000
+          npx -y dukascopy-node -i xauusd -from 2026-09-09 -to 2026-09-11 -t m5 -f csv -v -dir /tmp/dukascopy -bs 1 -bp 3000 -r 8 -rp 15000
           CSV_FILE=$(find /tmp/dukascopy -type f -name '*.csv' | head -n 1)
           test -n "$CSV_FILE"
           cp "$CSV_FILE" /tmp/dukascopy/xauusd_m5.csv
@@ -29,7 +29,7 @@ jobs:
         run: python3 scripts/locked_sell_asia_sep26_28_dukascopy.py
       - uses: actions/upload-artifact@v4
         with:
-          name: xauusd-locked-sell-asia-sep26-28-dukascopy
+          name: xauusd-locked-sell-asia-sep10-dukascopy
           path: backtest/locked_sell_asia_sep26_28_dukascopy.json
       - name: Commit result
         run: |
