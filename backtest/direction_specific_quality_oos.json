@@ -1,0 +1,203 @@
+{
+  "period": "2026-08 through 2026-09",
+  "overall": {
+    "trades": 210,
+    "tp": 84,
+    "sl": 125,
+    "win_rate": 40.19,
+    "net_R": 62.55,
+    "avg_RR": 2.23
+  },
+  "BUY": {
+    "overall": {
+      "trades": 120,
+      "tp": 39,
+      "sl": 81,
+      "win_rate": 32.5,
+      "net_R": 5.21,
+      "avg_RR": 2.22
+    },
+    "quality": {
+      "0": {
+        "trades": 53,
+        "tp": 16,
+        "sl": 37,
+        "win_rate": 30.19,
+        "net_R": -1.38,
+        "avg_RR": 2.22
+      },
+      "1": {
+        "trades": 14,
+        "tp": 4,
+        "sl": 10,
+        "win_rate": 28.57,
+        "net_R": -1.15,
+        "avg_RR": 2.22
+      },
+      "2": {
+        "trades": 51,
+        "tp": 19,
+        "sl": 32,
+        "win_rate": 37.25,
+        "net_R": 9.74,
+        "avg_RR": 2.22
+      },
+      "3": {
+        "trades": 2,
+        "tp": 0,
+        "sl": 2,
+        "win_rate": 0.0,
+        "net_R": -2,
+        "avg_RR": 2.29
+      }
+    },
+    "confirmation": {
+      "bullish continuation": {
+        "trades": 53,
+        "tp": 19,
+        "sl": 34,
+        "win_rate": 35.85,
+        "net_R": 7.74,
+        "avg_RR": 2.22
+      },
+      "bullish displacement": {
+        "trades": 14,
+        "tp": 4,
+        "sl": 10,
+        "win_rate": 28.57,
+        "net_R": -1.15,
+        "avg_RR": 2.22
+      },
+      "short-term bullish structure break": {
+        "trades": 53,
+        "tp": 16,
+        "sl": 37,
+        "win_rate": 30.19,
+        "net_R": -1.38,
+        "avg_RR": 2.22
+      }
+    },
+    "h1_bias": {
+      "BEARISH": {
+        "trades": 31,
+        "tp": 12,
+        "sl": 19,
+        "win_rate": 38.71,
+        "net_R": 6.93,
+        "avg_RR": 2.19
+      },
+      "BULLISH": {
+        "trades": 2,
+        "tp": 0,
+        "sl": 2,
+        "win_rate": 0.0,
+        "net_R": -2,
+        "avg_RR": 2.29
+      },
+      "NEUTRAL": {
+        "trades": 87,
+        "tp": 27,
+        "sl": 60,
+        "win_rate": 31.03,
+        "net_R": 0.28,
+        "avg_RR": 2.23
+      }
+    }
+  },
+  "SELL": {
+    "overall": {
+      "trades": 90,
+      "tp": 45,
+      "sl": 44,
+      "win_rate": 50.56,
+      "net_R": 57.34,
+      "avg_RR": 2.25
+    },
+    "quality": {
+      "0": {
+        "trades": 37,
+        "tp": 19,
+        "sl": 17,
+        "win_rate": 52.78,
+        "net_R": 25.23,
+        "avg_RR": 2.23
+      },
+      "1": {
+        "trades": 9,
+        "tp": 4,
+        "sl": 5,
+        "win_rate": 44.44,
+        "net_R": 4.22,
+        "avg_RR": 2.31
+      },
+      "2": {
+        "trades": 40,
+        "tp": 20,
+        "sl": 20,
+        "win_rate": 50.0,
+        "net_R": 25.19,
+        "avg_RR": 2.25
+      },
+      "3": {
+        "trades": 4,
+        "tp": 2,
+        "sl": 2,
+        "win_rate": 50.0,
+        "net_R": 2.7,
+        "avg_RR": 2.34
+      }
+    },
+    "confirmation": {
+      "bearish continuation": {
+        "trades": 44,
+        "tp": 22,
+        "sl": 22,
+        "win_rate": 50.0,
+        "net_R": 27.89,
+        "avg_RR": 2.26
+      },
+      "bearish displacement": {
+        "trades": 8,
+        "tp": 4,
+        "sl": 4,
+        "win_rate": 50.0,
+        "net_R": 5.22,
+        "avg_RR": 2.33
+      },
+      "short-term bearish structure break": {
+        "trades": 38,
+        "tp": 19,
+        "sl": 18,
+        "win_rate": 51.35,
+        "net_R": 24.23,
+        "avg_RR": 2.23
+      }
+    },
+    "h1_bias": {
+      "BEARISH": {
+        "trades": 5,
+        "tp": 2,
+        "sl": 3,
+        "win_rate": 40.0,
+        "net_R": 1.7,
+        "avg_RR": 2.29
+      },
+      "BULLISH": {
+        "trades": 16,
+        "tp": 9,
+        "sl": 7,
+        "win_rate": 56.25,
+        "net_R": 12.8,
+        "avg_RR": 2.25
+      },
+      "NEUTRAL": {
+        "trades": 69,
+        "tp": 34,
+        "sl": 34,
+        "win_rate": 50.0,
+        "net_R": 42.84,
+        "avg_RR": 2.25
+      }
+    }
+  }
+}
