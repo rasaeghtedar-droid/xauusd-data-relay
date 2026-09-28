@@ -1,0 +1,25 @@
+name: XAUUSD Same Data Main vs V2
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/same_data_main_vs_v2.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: same-data-main-vs-v2
+          path: backtest/same_data_main_vs_v2.json
+      - run: |
+          git config user.name "xauusd-data-relay"
+          git config user.email "actions@users.noreply.github.com"
+          git add backtest/same_data_main_vs_v2.json
+          git diff --cached --quiet || git commit -m "Add same-data main versus V2 comparison"
+          git pull --rebase origin main
+          git push
