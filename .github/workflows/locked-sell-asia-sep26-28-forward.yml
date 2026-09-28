@@ -1,0 +1,27 @@
+name: XAUUSD Locked SELL Asia Sep 26-28 Forward
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run locked forward validation
+        run: python3 scripts/locked_sell_asia_sep26_28_external.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xauusd-locked-sell-asia-sep26-28-forward
+          path: backtest/locked_sell_asia_sep26_28_external.json
+      - name: Commit result
+        run: |
+          git config user.name "xauusd-data-relay"
+          git config user.email "actions@users.noreply.github.com"
+          git add backtest/locked_sell_asia_sep26_28_external.json
+          git diff --cached --quiet || git commit -m "Add Sep 26-28 locked forward validation"
+          git pull --rebase origin main
+          git push
