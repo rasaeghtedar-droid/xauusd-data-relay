@@ -1,0 +1,94 @@
+{
+  "locked_rule": {
+    "direction": "SELL",
+    "session": "Asia UTC 00:00-06:59",
+    "target_cap_RR": 2.5
+  },
+  "source": "https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv",
+  "source_period": {
+    "data_start": "2026-08-01T00:00:00+00:00",
+    "evaluation_start": "2026-09-12T00:00:00+00:00",
+    "requested_end": "2026-09-25T23:59:59+00:00"
+  },
+  "data": {
+    "m5": 11016,
+    "m15": 3672,
+    "h1": 912,
+    "first_m5": "2026-08-02T22:00:00Z",
+    "last_m5": "2026-09-25T20:40:00Z"
+  },
+  "result": {
+    "trades": 4,
+    "tp": 3,
+    "sl": 1,
+    "win_rate": 75.0,
+    "net_R": 5.79,
+    "avg_RR": 2.22,
+    "max_drawdown_R": 1.0
+  },
+  "all_engine_signals": 55,
+  "no_trade_reasons": {
+    "no fresh liquidity sweep on latest M5 candle": 1785,
+    "sweep found but no M5 reversal confirmation": 441,
+    "no logical target with minimum 1:2 R:R": 69
+  },
+  "candidate_details": [
+    {
+      "signal": "SELL",
+      "entry": 4305.5,
+      "sl": 4310.52,
+      "tp": 4294.707,
+      "rr": 2.15,
+      "liquidity": "buy-side sweep",
+      "liquidity_level": 4305.617,
+      "confirmation": "short-term bearish structure break",
+      "h1_bias": "BULLISH",
+      "candle_time": "2026-09-15T03:45:00Z",
+      "status": "SETUP FOUND",
+      "outcome": "TP"
+    },
+    {
+      "signal": "SELL",
+      "entry": 4374.96,
+      "sl": 4380.72,
+      "tp": 4362.88,
+      "rr": 2.1,
+      "liquidity": "buy-side sweep",
+      "liquidity_level": 4376.628,
+      "confirmation": "short-term bearish structure break",
+      "h1_bias": "BEARISH",
+      "candle_time": "2026-09-21T01:25:00Z",
+      "status": "SETUP FOUND",
+      "outcome": "SL"
+    },
+    {
+      "signal": "SELL",
+      "entry": 4378.43,
+      "sl": 4381.39,
+      "tp": 4371.11,
+      "rr": 2.47,
+      "liquidity": "buy-side sweep",
+      "liquidity_level": 4380.243,
+      "confirmation": "bearish continuation",
+      "h1_bias": "BEARISH",
+      "candle_time": "2026-09-21T01:50:00Z",
+      "status": "SETUP FOUND",
+      "outcome": "TP"
+    },
+    {
+      "signal": "SELL",
+      "entry": 4273.55,
+      "sl": 4276.41,
+      "tp": 4267.333,
+      "rr": 2.17,
+      "liquidity": "buy-side sweep",
+      "liquidity_level": 4275.073,
+      "confirmation": "short-term bearish structure break",
+      "h1_bias": "NEUTRAL",
+      "candle_time": "2026-09-25T03:40:00Z",
+      "status": "SETUP FOUND",
+      "outcome": "TP"
+    }
+  ],
+  "note": "Independent out-of-sample validation; no parameter tuning. Source is not LiteFinance."
+}
