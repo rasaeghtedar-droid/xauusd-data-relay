@@ -1,0 +1,36 @@
+{
+  "period": {
+    "first": "2026-03-26T02:30:00Z",
+    "last": "2026-09-25T20:40:00Z"
+  },
+  "comparison": {
+    "all_main_cap_2_5": {
+      "trades": 723,
+      "tp": 238,
+      "sl": 480,
+      "win_rate": 33.15,
+      "net_R": 49.53,
+      "avg_RR": 2.23,
+      "max_drawdown_R": 50.37
+    },
+    "sell_only": {
+      "trades": 334,
+      "tp": 136,
+      "sl": 195,
+      "win_rate": 41.09,
+      "net_R": 107.27,
+      "avg_RR": 2.23,
+      "max_drawdown_R": 11.19
+    },
+    "sell_asia_only": {
+      "trades": 87,
+      "tp": 41,
+      "sl": 44,
+      "win_rate": 48.24,
+      "net_R": 47.6,
+      "avg_RR": 2.24,
+      "max_drawdown_R": 6.72
+    }
+  },
+  "definition": "All sets use the same V3-generated trades, Target Cap 2.5, closed candles and non-overlapping trade handling. This is a candidate diagnostic; production rules are unchanged."
+}
