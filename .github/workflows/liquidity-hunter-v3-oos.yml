@@ -1,0 +1,24 @@
+name: Liquidity Hunter V3 OOS Validation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/liquidity_hunter_v3_oos_validation.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: liquidity-hunter-v3-oos-validation
+          path: backtest/v3_quality_oos_validation.json
+      - run: |
+          git config user.name "xauusd-data-relay"
+          git config user.email "actions@users.noreply.github.com"
+          git add backtest/v3_quality_oos_validation.json
+          git diff --cached --quiet || git commit -m "Add V3 quality OOS validation"
+          git pull --rebase origin main
+          git push
