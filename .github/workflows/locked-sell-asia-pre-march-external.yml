@@ -1,0 +1,24 @@
+name: XAUUSD Locked SELL Asia Pre-March External
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/locked_sell_asia_pre_march_external.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xauusd-locked-sell-asia-pre-march-external
+          path: backtest/locked_sell_asia_pre_march_external.json
+      - run: |
+          git config user.name "xauusd-data-relay"
+          git config user.email "actions@users.noreply.github.com"
+          git add backtest/locked_sell_asia_pre_march_external.json
+          git diff --cached --quiet || git commit -m "Add external pre-March SELL Asia validation"
+          git pull --rebase origin main
+          git push
