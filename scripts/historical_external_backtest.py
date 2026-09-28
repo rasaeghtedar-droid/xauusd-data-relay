@@ -107,6 +107,6 @@ def main():
       "monthly":{"base":monthly(base_result["details"]),
                  "target_cap_2_5":monthly(cap_result["details"])}}
     OUT.parent.mkdir(parents=True,exist_ok=True); OUT.write_text(json.dumps(result,ensure_ascii=False),encoding="utf-8")
-    print(json.dumps({k:(v if k=="data" else {x:v[x] for x in ("signals","tp","sl","win_rate","net_R")}) for k,v in result.items() if k!="source"},indent=2))
+    print(json.dumps({"data":result["data"],"base":{x:result["base"][x] for x in ("signals","tp","sl","win_rate","net_R")},"target_cap_2_5":{x:result["target_cap_2_5"][x] for x in ("signals","tp","sl","win_rate","net_R")},"monthly":result["monthly"]},indent=2))
 
 if __name__=="__main__": main()
