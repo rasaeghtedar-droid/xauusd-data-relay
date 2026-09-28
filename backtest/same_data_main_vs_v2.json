@@ -1,0 +1,25 @@
+{
+  "data": {
+    "m5": 35954,
+    "m15": 11989,
+    "h1": 3007,
+    "first_m5": "2026-03-26T02:30:00Z",
+    "last_m5": "2026-09-25T20:40:00Z"
+  },
+  "main_current_cap2_5": {
+    "trades": 723,
+    "tp": 238,
+    "sl": 480,
+    "win_rate": 33.15,
+    "net_R": 49.53,
+    "avg_RR": 2.23
+  },
+  "v2_sell_bearish_structure_cap2_5": {
+    "trades": 543,
+    "tp": 172,
+    "sl": 367,
+    "win_rate": 31.91,
+    "net_R": 13.45,
+    "avg_RR": 2.22
+  }
+}
