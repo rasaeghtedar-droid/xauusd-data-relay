@@ -52,6 +52,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # The refreshed market-data file is intentionally not published by this workflow.
+          git restore -- data/xauusd_analysis.json
           git add data/locked_sell_asia_forward_state.json
           if [ -f data/locked_sell_asia_forward_signal.json ]; then
             git add data/locked_sell_asia_forward_signal.json
