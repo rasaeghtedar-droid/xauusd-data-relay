@@ -20,10 +20,9 @@ def load_engine():
 
 def main():
     data = json.loads(DATA.read_text(encoding="utf-8"))
-    fetched = dt(data["fetchedAt"])
-    now = datetime.now(timezone.utc)
     latest = data["intervals"]["5m"]["latestClosed"]
     latest_time = dt(latest["openTime"])
+    now = datetime.now(timezone.utc)
     age_min = (now - latest_time).total_seconds() / 60
 
     result = {
@@ -75,16 +74,18 @@ def main():
         "last_signal_key": previous.get("last_signal_key"),
         "last_signal_time": previous.get("last_signal_time"),
     }
+
     if result["status"] == "NEW SIGNAL":
         state["last_signal_key"] = signal_key
         state["last_signal_time"] = result["signal"]["candle_time"]
         OUT.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(json.dumps(result, ensure_ascii=False, indent=2))
     else:
-        if OUT.exists() and result["status"] != "DUPLICATE":
+        # The signal file is a one-run notification payload.
+        # Remove it for both NO TRADE and DUPLICATE so it can never be resent.
+        if OUT.exists():
             OUT.unlink()
-        print(json.dumps(result, ensure_ascii=False, indent=2))
 
+    print(json.dumps(result, ensure_ascii=False, indent=2))
     STATE.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
 
 if __name__ == "__main__":
