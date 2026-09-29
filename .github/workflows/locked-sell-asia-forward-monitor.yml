@@ -65,3 +65,45 @@ jobs:
           git commit -m "Record locked SELL Asia forward state"
           git pull --rebase origin main
           git push
+
+      - name: Send Telegram alert
+        if: success() && hashFiles('data/locked_sell_asia_forward_signal.json') != ''
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.parse, urllib.request
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+
+          path = "data/locked_sell_asia_forward_signal.json"
+          payload = json.load(open(path, encoding="utf-8"))
+          s = payload["signal"]
+
+          candle_time = datetime.fromisoformat(s["candle_time"].replace("Z","+00:00"))
+          iran_time = candle_time.astimezone(ZoneInfo("Asia/Tehran")).strftime("%Y-%m-%d %H:%M")
+
+          text = (
+              "🥇 XAUUSD — SELL SIGNAL\n\n"
+              f"📍 Entry: {s['entry']}\n"
+              f"🛑 SL: {s['sl']}\n"
+              f"🎯 TP: {s['tp']}\n"
+              f"📊 R:R: {s['rr']}\n"
+              f"⏰ زمان سیگنال: {iran_time} به وقت ایران 🇮🇷\n\n"
+              f"🔑 دلیل: {s.get('reason','Liquidity sweep + M5 confirmation')}\n"
+              "⚠️ Signal only — بررسی دستی قبل از معامله"
+          )
+
+          url = f"https://api.telegram.org/bot{os.environ['TELEGRAM_BOT_TOKEN']}/sendMessage"
+          body = urllib.parse.urlencode({
+              "chat_id": os.environ["TELEGRAM_CHAT_ID"],
+              "text": text
+          }).encode()
+          req = urllib.request.Request(url, data=body, method="POST")
+          with urllib.request.urlopen(req, timeout=30) as r:
+              response = json.load(r)
+          if not response.get("ok"):
+              raise RuntimeError(response)
+          print("Telegram alert sent.")
+          PY
