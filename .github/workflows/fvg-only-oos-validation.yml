@@ -1,0 +1,28 @@
+name: FVG Only OOS Validation
+on:
+  workflow_dispatch:
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout FVG-only experiment branch
+        uses: actions/checkout@v4
+        with:
+          ref: experiment-fvg-setups
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run locked FVG-only OOS validation
+        env:
+          FVG_ONLY_START_UTC: "2026-08-01T00:00:00+00:00"
+          FVG_ONLY_END_UTC: "2026-09-09T23:59:59+00:00"
+          COMBINED_SOURCE_URL: "https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv"
+        run: |
+          set -o pipefail
+          python scripts/fvg_only_gold_hunter_backtest.py | tee /tmp/fvg_only_oos_output.txt
+      - name: Upload FVG-only result
+        uses: actions/upload-artifact@v4
+        with:
+          name: fvg-only-oos-results
+          path: backtest/fvg_only_gold_hunter_results.json
