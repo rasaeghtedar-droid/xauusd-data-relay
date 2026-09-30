@@ -35,6 +35,13 @@ jobs:
           COMBINED_SOURCE_URL: "https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv"
         run: |
           python scripts/fvg_independent_lifecycle_diagnostics.py
+      - name: Run confirmed FVG setup performance
+        env:
+          FVG_ONLY_START_UTC: "2026-08-01T00:00:00+00:00"
+          FVG_ONLY_END_UTC: "2026-09-09T23:59:59+00:00"
+          COMBINED_SOURCE_URL: "https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv"
+        run: |
+          python scripts/fvg_confirmed_setups_performance.py
       - name: Print FVG-only diagnostics
         run: |
           echo "===== FVG-ONLY DIAGNOSTICS JSON ====="
@@ -45,6 +52,11 @@ jobs:
           echo "===== INDEPENDENT FVG LIFECYCLE JSON ====="
           cat backtest/fvg_independent_lifecycle_diagnostics.json
           echo "===== END INDEPENDENT FVG LIFECYCLE JSON ====="
+      - name: Print confirmed FVG setup performance
+        run: |
+          echo "===== CONFIRMED FVG SETUP PERFORMANCE JSON ====="
+          cat backtest/fvg_confirmed_setups_performance.json
+          echo "===== END CONFIRMED FVG SETUP PERFORMANCE JSON ====="
       - name: Print FVG-only result
         run: |
           echo "===== FVG-ONLY RESULT JSON ====="
@@ -58,3 +70,4 @@ jobs:
             backtest/fvg_only_gold_hunter_results.json
             backtest/fvg_only_diagnostics.json
             backtest/fvg_independent_lifecycle_diagnostics.json
+            backtest/fvg_confirmed_setups_performance.json
