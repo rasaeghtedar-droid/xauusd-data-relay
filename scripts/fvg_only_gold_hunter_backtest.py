@@ -6,7 +6,7 @@ from datetime import datetime,timedelta
 from pathlib import Path
 
 URL=os.getenv("COMBINED_SOURCE_URL","https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/sample-2026-07-31/XAUUSD_5m.csv")
-MIN_RR,MAX_RR=2.0,2.5
+MIN_RR=2.0
 PAD=0.5
 LOOKBACK=30
 SWING=3
@@ -57,11 +57,14 @@ def m5_conf(bs,d):
     if d=="SELL" and z["close"]<z["open"] and z["close"]<c["low"]:return "continuation"
     return None
 def target(d,entry,sl,ctx):
+    """Return the nearest structural target whose RR is at least MIN_RR.
+    There is intentionally no upper RR cap.
+    """
     levels=uniq(swings(ctx,"high")+equals(ctx,"high")) if d=="BUY" else uniq(swings(ctx,"low")+equals(ctx,"low"))
     if d=="BUY":
-        v=[x for x in sorted(x for x in levels if x>entry) if MIN_RR<=(x-entry)/(entry-sl)<=MAX_RR]
+        v=[x for x in sorted(x for x in levels if x>entry) if (x-entry)/(entry-sl)>=MIN_RR]
     else:
-        v=[x for x in sorted((x for x in levels if x<entry),reverse=True) if MIN_RR<=(entry-x)/(sl-entry)<=MAX_RR]
+        v=[x for x in sorted((x for x in levels if x<entry),reverse=True) if (entry-x)/(sl-entry)>=MIN_RR]
     return v[0] if v else None
 def liquidity_setup(m5,m15,i):
     t=pt(m5[i]["openTime"]); ctx=[x for x in m15 if pt(x["openTime"])<=t-timedelta(minutes=15)][-LOOKBACK:]
@@ -196,7 +199,7 @@ def main():
     for d in ("BUY","SELL"):
         ss=[x for x in signals if x["direction"]==d]; ww=sum(x["outcome"]=="TP" for x in ss); ll=sum(x["outcome"]=="SL" for x in ss)
         by[d]={"signals":len(ss),"tp":ww,"sl":ll,"ambiguous":sum(x["outcome"]=="AMBIGUOUS" for x in ss),"win_rate":round(100*ww/(ww+ll),2) if ww+ll else None,"net_r":round(sum(x["rr"] if x["outcome"]=="TP" else -1 if x["outcome"]=="SL" else 0 for x in ss),2)}
-    result={"status":"COMPLETED","source":URL,"validation_start_utc":start,"validation_end_utc":end,"data":{"m5":len(m5),"m15":len(m15),"first_m5":m5[0]["openTime"],"last_m5":m5[-1]["openTime"]},"overall":{"signals":len(signals),"tp":w,"sl":l,"ambiguous":a,"win_rate":round(100*w/(w+l),2) if w+l else None,"net_r":round(net,2),"avg_rr":round(sum(x["rr"] for x in signals)/len(signals),2) if signals else None,"conservative_net_r":round(net-a,2)},"by_direction":by,"signals":signals,"notes":["FVG-only validation; Liquidity is not used as a prerequisite.","One active setup at a time.","FVG lifecycle is stateful and each FVG can trigger at most once.","Future-candle scanning/lookahead is prohibited.","No parameter tuning; research only."]}
+    result={"status":"COMPLETED","source":URL,"validation_start_utc":start,"validation_end_utc":end,"data":{"m5":len(m5),"m15":len(m15),"first_m5":m5[0]["openTime"],"last_m5":m5[-1]["openTime"]},"overall":{"signals":len(signals),"tp":w,"sl":l,"ambiguous":a,"win_rate":round(100*w/(w+l),2) if w+l else None,"net_r":round(net,2),"avg_rr":round(sum(x["rr"] for x in signals)/len(signals),2) if signals else None,"conservative_net_r":round(net-a,2)},"by_direction":by,"signals":signals,"notes":["FVG-only validation; Liquidity is not used as a prerequisite.","One active setup at a time.","FVG lifecycle is stateful and each FVG can trigger at most once.","Future-candle scanning/lookahead is prohibited.","RR rule: accept the nearest structural target with RR >= 2.0; no upper RR cap.","No parameter tuning; research only."]}
     p=Path("backtest/fvg_only_gold_hunter_results.json"); p.parent.mkdir(exist_ok=True); p.write_text(json.dumps(result,indent=2),encoding="utf-8"); print(json.dumps(result,indent=2))
 
 if __name__=="__main__":main()
