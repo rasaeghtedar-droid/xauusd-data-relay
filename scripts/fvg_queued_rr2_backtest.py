@@ -88,18 +88,18 @@ def main():
             pending_fvgs.append({**f,"ctx":ctx})
 
         # 4) If no active trade, fill the oldest valid queued limit order touched by this candle.
-        #    The original one-trade rule is respected; queued opportunities are not discarded
-        #    merely because another trade was active.
+        # Conservative OHLC rule: if entry is touched and the same candle reaches
+        # the stop boundary, classify the trade as SL; if entry+TP+SL are all touched,
+        # classify as AMBIGUOUS.
         if active is None and orders:
             orders.sort(key=lambda x:(x["order_created_index"], x["confirmation_time"]))
             chosen=None
             for o in orders:
                 touches_entry=(i>o["order_created_index"] and c["low"]<=o["entry"]<=c["high"])
-                invalid=(o["direction"]=="BUY" and c["low"]<=o["zone_lo"]) or (o["direction"]=="SELL" and c["high"]>=o["zone_hi"])
                 if touches_entry:
                     chosen=o
-                    chosen["_fill_candle_invalidates"]=invalid
                     break
+                invalid=(o["direction"]=="BUY" and c["low"]<=o["zone_lo"]) or (o["direction"]=="SELL" and c["high"]>=o["zone_hi"])
                 if invalid:
                     o["status"]="CANCELLED_INVALIDATION"
             orders=[o for o in orders if o.get("status")=="QUEUED"]
@@ -107,9 +107,20 @@ def main():
                 chosen["status"]="FILLED"
                 chosen["entry_index"]=i
                 chosen["fill_time"]=c["openTime"]
-                if chosen.pop("_fill_candle_invalidates",False):
-                    # OHLC cannot establish intrabar order; mark conservatively ambiguous.
+                sl_hit=(c["low"]<=chosen["sl"]) if chosen["direction"]=="BUY" else (c["high"]>=chosen["sl"])
+                tp_hit=(c["high"]>=chosen["tp"]) if chosen["direction"]=="BUY" else (c["low"]<=chosen["tp"])
+                if sl_hit and tp_hit:
                     chosen["outcome"]="AMBIGUOUS"
+                    chosen["exit_time"]=c["openTime"]
+                    trades.append(chosen)
+                    active=None
+                elif sl_hit:
+                    chosen["outcome"]="SL"
+                    chosen["exit_time"]=c["openTime"]
+                    trades.append(chosen)
+                    active=None
+                elif tp_hit:
+                    chosen["outcome"]="TP"
                     chosen["exit_time"]=c["openTime"]
                     trades.append(chosen)
                     active=None
@@ -176,7 +187,7 @@ def main():
             "Orders are cancelled if price invalidates the FVG zone before fill.",
             "No upper RR cap.",
             "No future-candle scanning/lookahead.",
-            "If a fill candle also reaches the invalidation/stop boundary, outcome is AMBIGUOUS because OHLC cannot establish intrabar order.",
+            "Conservative same-candle rule: entry+SL = SL; entry+TP = TP; entry+SL+TP = AMBIGUOUS.",
             "This is a research execution-policy test, not yet a production promotion.",
         ],
     }
