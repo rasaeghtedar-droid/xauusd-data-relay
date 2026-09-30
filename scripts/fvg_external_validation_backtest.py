@@ -7,7 +7,7 @@ without tuning. Research only; does not touch the main engine.
 """
 from __future__ import annotations
 import csv, io, json, urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 URL="https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/sample-2026-07-31/XAUUSD_5m.csv"
