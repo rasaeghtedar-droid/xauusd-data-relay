@@ -47,6 +47,19 @@ jobs:
           echo "===== QUEUED FVG RR2 RESULT JSON ====="
           cat backtest/fvg_queued_rr2_results.json
           echo "===== END QUEUED FVG RR2 RESULT ====="
+      - name: Run realistic FVG RR2 backtest
+        env:
+          FVG_ONLY_START_UTC: "2026-08-01T00:00:00+00:00"
+          FVG_ONLY_END_UTC: "2026-09-09T23:59:59+00:00"
+          COMBINED_SOURCE_URL: "https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv"
+        run: |
+          set -o pipefail
+          python scripts/fvg_realistic_rr2_backtest.py | tee /tmp/fvg_realistic_rr2_output.txt
+      - name: Print realistic FVG RR2 result
+        run: |
+          echo "===== REALISTIC FVG RR2 RESULT JSON ====="
+          cat backtest/fvg_realistic_rr2_results.json
+          echo "===== END REALISTIC FVG RR2 RESULT ====="
       - name: Print FVG-only result
         run: |
           echo "===== FVG-ONLY RESULT JSON ====="
