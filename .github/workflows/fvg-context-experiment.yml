@@ -1,0 +1,25 @@
+name: FVG Context Experiment
+
+on:
+  workflow_dispatch:
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: experiment-fvg-setups
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run FVG context experiment
+        run: python scripts/fvg_context_experiment_backtest.py
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: fvg-context-experiment-results
+          path: backtest/fvg_context_experiment_results.json
+          if-no-files-found: error
