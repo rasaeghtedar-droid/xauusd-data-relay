@@ -3,7 +3,7 @@
 from __future__ import annotations
 import json, os
 from pathlib import Path
-from scripts.fvg_only_gold_hunter_backtest import (
+from fvg_only_gold_hunter_backtest import (
     load, agg, fvg_at, target, pt, PAD
 )
 
@@ -68,7 +68,6 @@ def main():
                         life["signals"] += 1
                         life[f"{f['direction']}_signals"] += 1
                         pending = None
-                        # Match baseline's one-active-setup behavior.
                         for k in range(i + 1, len(m5)):
                             b = m5[k]
                             sl_hit = b["low"] <= sl if f["direction"] == "BUY" else b["high"] >= sl
