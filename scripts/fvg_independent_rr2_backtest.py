@@ -3,8 +3,11 @@
 from __future__ import annotations
 import json, os
 from pathlib import Path
+import sys
 
-from scripts.fvg_only_gold_hunter_backtest import (
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from fvg_only_gold_hunter_backtest import (
     agg, fvg_at, load, outcome, pt, target
 )
 
