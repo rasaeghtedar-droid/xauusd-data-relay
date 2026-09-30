@@ -62,7 +62,7 @@ def target_for(direction, entry, sl, ctx, engine):
     return viable[0] if viable else None
 
 def recent_m5_sweep(m5, i, direction, engine):
-    start=max(5,i-SWEEP_LOOKBACK)
+    start=max(5,i-SWEEP_LOOKBACK_M5)
     recent=m5[start:i]
     if len(recent)<3: return False
     # Use only levels formed before each candidate sweep candle.
