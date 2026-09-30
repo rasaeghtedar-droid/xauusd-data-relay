@@ -7,10 +7,15 @@ from pathlib import Path
 
 from fvg_only_gold_hunter_backtest import fvg_at, agg, pt, swings, equals, uniq, PAD, LOOKBACK, load
 
-def nearest_target(direction, entry, ctx):
+def target_at_min_rr(direction, entry, risk, ctx, min_rr=2.0):
     levels = uniq(swings(ctx, "high") + equals(ctx, "high")) if direction == "BUY" else uniq(swings(ctx, "low") + equals(ctx, "low"))
     valid = [x for x in levels if x > entry] if direction == "BUY" else [x for x in levels if x < entry]
-    return min(valid) if valid else None
+    ordered = sorted(valid, reverse=direction == "SELL")
+    for level in ordered:
+        rr = ((level - entry) / risk) if direction == "BUY" else ((entry - level) / risk)
+        if rr >= min_rr:
+            return level, rr
+    return None, None
 
 def score(m5, direction, sl, tp, start):
     for k in range(start + 1, len(m5)):
@@ -57,12 +62,10 @@ def main():
                 if confirmed:
                     entry = f["mid"]
                     sl = f["lo"] - PAD if f["direction"] == "BUY" else f["hi"] + PAD
-                    tp = nearest_target(f["direction"], entry, f["ctx"])
+                    risk = (entry - sl) if f["direction"] == "BUY" else (sl - entry)
+                    tp, rr = target_at_min_rr(f["direction"], entry, risk, f["ctx"], 2.0)
                     if tp is not None:
-                        risk = (entry - sl) if f["direction"] == "BUY" else (sl - entry)
-                        rr = ((tp - entry) / risk) if f["direction"] == "BUY" else ((entry - tp) / risk)
-                        if rr >= 2.0:
-                            setups.append({
+                        setups.append({
                                 "direction": f["direction"],
                                 "formation_time": f["time"],
                                 "confirmation_time": c["openTime"],
@@ -123,8 +126,8 @@ def main():
         "rr_buckets": [bucket(name, pred) for name, pred in buckets],
         "setups": setups,
         "notes": [
-            "All confirmed FVG setups with original nearest pre-confirmation M15 structural target RR >= 2.0 are eligible.",
-            "No upper RR cutoff is applied.",
+            "All confirmed FVG setups are eligible when the nearest pre-confirmation M15 structural target that satisfies RR >= 2.0 exists.",
+            "No upper RR cutoff is applied; the first structural target meeting RR >= 2.0 is used.",
             "No future data is used to choose the target; future candles are used only to score TP/SL outcome.",
             "Diagnostic only; no strategy parameters changed.",
         ],
