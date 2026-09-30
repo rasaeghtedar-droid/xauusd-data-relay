@@ -8,7 +8,7 @@ from pathlib import Path
 from datetime import timedelta
 from fvg_only_gold_hunter_backtest import load, agg, fvg_at, target, pt, PAD
 
-MIN_RR, MAX_RR = 2.0, 2.5
+MIN_RR = 2.0
 
 def outcome(m5, direction, sl, tp, start):
     for k in range(start + 1, len(m5)):
@@ -72,7 +72,7 @@ def main():
                         if f["direction"] == "BUY"
                         else (entry - tp) / (sl - entry)
                     )
-                    if MIN_RR <= rr <= MAX_RR:
+                    if rr >= MIN_RR:
                         out = outcome(m5, f["direction"], sl, tp, j)
                 confirmations.append({
                     "direction": f["direction"],
@@ -108,7 +108,7 @@ def main():
         "setups": eligible,
         "notes": [
             "Independent FVG lifecycle; overlapping FVGs are allowed.",
-            "Only setups with the existing target engine and RR 2.0-2.5 are included in performance.",
+            "Only setups with the existing target engine and RR >= 2.0 are included in performance; there is no upper RR cap.",
             "Research diagnostic only; baseline strategy unchanged.",
         ],
     }
