@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Combined Gold Hunter validation: Liquidity + FVG, fixed rules, independent data."""
 from __future__ import annotations
-import csv,io,json,urllib.request
+import csv,io,json,urllib.request,os
 from datetime import datetime,timedelta
 from pathlib import Path
 
-URL="https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/sample-2026-07-31/XAUUSD_5m.csv"
+URL=os.getenv("COMBINED_SOURCE_URL","https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/sample-2026-07-31/XAUUSD_5m.csv")
 MIN_RR,MAX_RR=2.0,2.5
 PAD=0.5
 LOOKBACK=30
@@ -154,7 +154,11 @@ def outcome(s,m5,start):
         if sl:return "SL"
     return "OPEN_AT_DATA_END"
 def main():
-    m5=load();m15=agg(m5,15); signals=[];active_until=None;reason={"liquidity":0,"fvg":0,"both_same_cycle":0}
+    m5=load()
+    start=os.getenv("COMBINED_START_UTC"); end=os.getenv("COMBINED_END_UTC")
+    if start: m5=[x for x in m5 if pt(x["openTime"])>=pt(start)]
+    if end: m5=[x for x in m5 if pt(x["openTime"])<=pt(end)]
+    m15=agg(m5,15); signals=[];active_until=None;reason={"liquidity":0,"fvg":0,"both_same_cycle":0}
     i=50
     while i<len(m5):
         if active_until and pt(m5[i]["openTime"])<=active_until:i+=1;continue
@@ -179,6 +183,6 @@ def main():
     for e in ("LIQUIDITY","FVG","CONFLUENCE"):
         ss=[x for x in signals if x["engine"]==e];ww=sum(x["outcome"]=="TP" for x in ss);ll=sum(x["outcome"]=="SL" for x in ss)
         by[e]={"signals":len(ss),"tp":ww,"sl":ll,"ambiguous":sum(x["outcome"]=="AMBIGUOUS" for x in ss),"win_rate":round(100*ww/(ww+ll),2) if ww+ll else None,"net_r":round(sum(x["rr"] if x["outcome"]=="TP" else -1 if x["outcome"]=="SL" else 0 for x in ss),2)}
-    result={"status":"COMPLETED","source":URL,"data":{"m5":len(m5),"m15":len(m15),"first_m5":m5[0]["openTime"],"last_m5":m5[-1]["openTime"]},"overall":{"signals":len(signals),"tp":w,"sl":l,"ambiguous":a,"win_rate":round(100*w/(w+l),2) if w+l else None,"net_r":round(net,2),"avg_rr":round(sum(x["rr"] for x in signals)/len(signals),2) if signals else None},"by_engine":by,"router_counts":reason,"signals":signals,"notes":["Combined fixed-rule validation only.","One active setup at a time; if Liquidity and FVG trigger on the same cycle, one CONFLUENCE signal is counted.","No parameter tuning; research only."]}
+    result={"status":"COMPLETED","source":URL,"validation_start_utc":start,"validation_end_utc":end,"data":{"m5":len(m5),"m15":len(m15),"first_m5":m5[0]["openTime"],"last_m5":m5[-1]["openTime"]},"overall":{"signals":len(signals),"tp":w,"sl":l,"ambiguous":a,"win_rate":round(100*w/(w+l),2) if w+l else None,"net_r":round(net,2),"avg_rr":round(sum(x["rr"] for x in signals)/len(signals),2) if signals else None},"by_engine":by,"router_counts":reason,"signals":signals,"notes":["Combined fixed-rule validation only.","One active setup at a time; if Liquidity and FVG trigger on the same cycle, one CONFLUENCE signal is counted.","No parameter tuning; research only."]}
     p=Path("backtest/combined_gold_hunter_results.json");p.parent.mkdir(exist_ok=True);p.write_text(json.dumps(result,indent=2),encoding="utf-8");print(json.dumps(result,indent=2))
 if __name__=="__main__":main()
