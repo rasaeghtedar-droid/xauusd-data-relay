@@ -21,13 +21,27 @@ jobs:
         run: |
           set -o pipefail
           python scripts/fvg_only_gold_hunter_backtest.py | tee /tmp/fvg_only_oos_output.txt
+      - name: Run FVG-only diagnostics
+        env:
+          FVG_ONLY_START_UTC: "2026-08-01T00:00:00+00:00"
+          FVG_ONLY_END_UTC: "2026-09-09T23:59:59+00:00"
+          COMBINED_SOURCE_URL: "https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv"
+        run: |
+          python scripts/fvg_only_diagnostics.py
+      - name: Print FVG-only diagnostics
+        run: |
+          echo "===== FVG-ONLY DIAGNOSTICS JSON ====="
+          cat backtest/fvg_only_diagnostics.json
+          echo "===== END FVG-ONLY DIAGNOSTICS JSON ====="
       - name: Print FVG-only result
         run: |
           echo "===== FVG-ONLY RESULT JSON ====="
           cat backtest/fvg_only_gold_hunter_results.json
-          echo "===== END RESULT JSON ====="
+          echo "===== END FVG-ONLY RESULT JSON ====="
       - name: Upload FVG-only result
         uses: actions/upload-artifact@v4
         with:
           name: fvg-only-oos-results
-          path: backtest/fvg_only_gold_hunter_results.json
+          path: |
+            backtest/fvg_only_gold_hunter_results.json
+            backtest/fvg_only_diagnostics.json
