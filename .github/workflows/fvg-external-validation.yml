@@ -1,0 +1,27 @@
+name: FVG External Validation
+
+on:
+  workflow_dispatch:
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout FVG experiment branch
+        uses: actions/checkout@v4
+        with:
+          ref: experiment-fvg-setups
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run external validation
+        run: python scripts/fvg_external_validation_backtest.py
+      - name: Upload validation result
+        uses: actions/upload-artifact@v4
+        with:
+          name: fvg-external-validation-results
+          path: backtest/fvg_external_validation_results.json
+          if-no-files-found: error
