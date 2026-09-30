@@ -101,6 +101,19 @@ jobs:
           echo "===== FVG NEAREST TARGET DIAGNOSTICS JSON ====="
           cat backtest/fvg_nearest_target_diagnostics.json
           echo "===== END FVG NEAREST TARGET DIAGNOSTICS JSON ====="
+      - name: Run independent FVG RR2 research backtest
+        env:
+          FVG_ONLY_START_UTC: "2026-08-01T00:00:00+00:00"
+          FVG_ONLY_END_UTC: "2026-09-09T23:59:59+00:00"
+          COMBINED_SOURCE_URL: "https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv"
+        run: |
+          set -o pipefail
+          python scripts/fvg_independent_rr2_backtest.py | tee /tmp/fvg_independent_rr2_output.txt
+      - name: Print independent FVG RR2 result
+        run: |
+          echo "===== INDEPENDENT FVG RR2 RESULT JSON ====="
+          cat backtest/fvg_independent_rr2_results.json
+          echo "===== END INDEPENDENT FVG RR2 RESULT ====="
       - name: Print FVG-only result
         run: |
           echo "===== FVG-ONLY RESULT JSON ====="
