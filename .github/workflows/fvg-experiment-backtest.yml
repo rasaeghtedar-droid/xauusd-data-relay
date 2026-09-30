@@ -1,0 +1,31 @@
+name: FVG Experiment Backtest
+
+on:
+  workflow_dispatch:
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout FVG experiment branch
+        uses: actions/checkout@v4
+        with:
+          ref: experiment-fvg-setups
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run FVG experiment backtest
+        run: python scripts/fvg_experiment_backtest.py
+
+      - name: Upload FVG experiment result
+        uses: actions/upload-artifact@v4
+        with:
+          name: fvg-experiment-results
+          path: backtest/fvg_experiment_results.json
+          if-no-files-found: error
