@@ -112,49 +112,21 @@ def recent_sweep(bs,i,d):
             if d=="SELL" and c["high"]>lv and c["close"]<lv and quality(c,lv,d):return True
     return False
 def fvg_setup(m5,m15,i):
-    """Evaluate only information available through the current closed M5 candle.
-
-    An FVG must be formed on an earlier candle and can only become a signal
-    when the current candle returns to its midpoint with directional
-    confirmation. This deliberately avoids scanning future candles.
-    """
-    c=m5[i]
-    # Search backward for the most recent still-valid FVG. No future candles
-    # are inspected, so the signal timestamp is always the current candle.
-    for j in range(i-1,8,-1):
-        f=fvg_at(m5,j)
-        if not f:
-            continue
-        if not (near_liq(f,m15) or recent_sweep(m5,j,f["direction"])):
-            continue
-
-        invalid=False
-        # Preserve the original invalidation rule, but only using candles
-        # that were actually available before the current candle.
-        for k in range(j+1,i):
-            b=m5[k]
-            if (f["direction"]=="BUY" and b["low"]<=f["lo"]) or (f["direction"]=="SELL" and b["high"]>=f["hi"]):
-                invalid=True
-                break
-        if invalid:
-            continue
-
-        if not (c["low"]<=f["mid"]<=c["high"]):
-            continue
-
-        ok=(f["direction"]=="BUY" and c["close"]>f["mid"] and c["close"]>c["open"]) or (f["direction"]=="SELL" and c["close"]<f["mid"] and c["close"]<c["open"])
-        if not ok:
-            continue
-
-        t=pt(f["time"])
-        ctx=[x for x in m15 if pt(x["openTime"])<=t-timedelta(minutes=15)][-LOOKBACK:]
-        entry=f["mid"]
-        sl=f["lo"]-PAD if f["direction"]=="BUY" else f["hi"]+PAD
-        tp=target(f["direction"],entry,sl,ctx)
-        if tp is None:
-            continue
-        rr=(tp-entry)/(entry-sl) if f["direction"]=="BUY" else (entry-tp)/(sl-entry)
-        return {"engine":"FVG","direction":f["direction"],"entry":entry,"sl":sl,"tp":tp,"rr":rr,"trigger":"FVG return + directional confirmation","time":c["openTime"],"location":"FVG+LIQUIDITY","entry_index":i}
+    f=fvg_at(m5,i)
+    if not f:return None
+    if not (near_liq(f,m15) or recent_sweep(m5,i,f["direction"])):return None
+    for j in range(i+1,len(m5)):
+        c=m5[j]
+        if (c["low"]<=f["mid"]<=c["high"]):
+            ok=(f["direction"]=="BUY" and c["close"]>f["mid"] and c["close"]>c["open"]) or (f["direction"]=="SELL" and c["close"]<f["mid"] and c["close"]<c["open"])
+            if not ok:
+                if (f["direction"]=="BUY" and c["low"]<=f["lo"]) or (f["direction"]=="SELL" and c["high"]>=f["hi"]):return None
+                continue
+            t=pt(f["time"]);ctx=[x for x in m15 if pt(x["openTime"])<=t-timedelta(minutes=15)][-LOOKBACK:]
+            entry=f["mid"];sl=f["lo"]-PAD if f["direction"]=="BUY" else f["hi"]+PAD;tp=target(f["direction"],entry,sl,ctx)
+            if tp is None:return None
+            rr=(tp-entry)/(entry-sl) if f["direction"]=="BUY" else (entry-tp)/(sl-entry)
+            return {"engine":"FVG","direction":f["direction"],"entry":entry,"sl":sl,"tp":tp,"rr":rr,"trigger":"FVG return + directional confirmation","time":c["openTime"],"location":"FVG+LIQUIDITY"}
     return None
 def load():
     raw=urllib.request.urlopen(URL,timeout=60).read().decode()
@@ -199,9 +171,9 @@ def main():
             i+=1;continue
         reason["liquidity" if l else "fvg"]+=1
         chosen={**chosen,"rr":round(chosen["rr"],2),"entry":round(chosen["entry"],3),"sl":round(chosen["sl"],3),"tp":round(chosen["tp"],3)}
-        entry_index=chosen.get("entry_index",i);out=outcome(chosen,m5,entry_index);chosen["outcome"]=out;signals.append(chosen)
+        out=outcome(chosen,m5,i);chosen["outcome"]=out;signals.append(chosen)
         if out in ("TP","SL","AMBIGUOUS"):
-            for k in range(entry_index+1,len(m5)):
+            for k in range(i+1,len(m5)):
                 b=m5[k];sl=b["low"]<=chosen["sl"] if chosen["direction"]=="BUY" else b["high"]>=chosen["sl"];tp=b["high"]>=chosen["tp"] if chosen["direction"]=="BUY" else b["low"]<=chosen["tp"]
                 if sl or tp:active_until=pt(b["openTime"]);break
         i+=1
@@ -211,6 +183,6 @@ def main():
     for e in ("LIQUIDITY","FVG","CONFLUENCE"):
         ss=[x for x in signals if x["engine"]==e];ww=sum(x["outcome"]=="TP" for x in ss);ll=sum(x["outcome"]=="SL" for x in ss)
         by[e]={"signals":len(ss),"tp":ww,"sl":ll,"ambiguous":sum(x["outcome"]=="AMBIGUOUS" for x in ss),"win_rate":round(100*ww/(ww+ll),2) if ww+ll else None,"net_r":round(sum(x["rr"] if x["outcome"]=="TP" else -1 if x["outcome"]=="SL" else 0 for x in ss),2)}
-    result={"status":"COMPLETED","source":URL,"validation_start_utc":start,"validation_end_utc":end,"data":{"m5":len(m5),"m15":len(m15),"first_m5":m5[0]["openTime"],"last_m5":m5[-1]["openTime"]},"overall":{"signals":len(signals),"tp":w,"sl":l,"ambiguous":a,"win_rate":round(100*w/(w+l),2) if w+l else None,"net_r":round(net,2),"avg_rr":round(sum(x["rr"] for x in signals)/len(signals),2) if signals else None},"by_engine":by,"router_counts":reason,"signals":signals,"notes":["Combined fixed-rule validation only.","One active setup at a time; if Liquidity and FVG trigger on the same cycle, one CONFLUENCE signal is counted.","No parameter tuning; research only.","FVG entry is evaluated only on the current closed candle; future-candle lookahead is prohibited."]}
+    result={"status":"COMPLETED","source":URL,"validation_start_utc":start,"validation_end_utc":end,"data":{"m5":len(m5),"m15":len(m15),"first_m5":m5[0]["openTime"],"last_m5":m5[-1]["openTime"]},"overall":{"signals":len(signals),"tp":w,"sl":l,"ambiguous":a,"win_rate":round(100*w/(w+l),2) if w+l else None,"net_r":round(net,2),"avg_rr":round(sum(x["rr"] for x in signals)/len(signals),2) if signals else None},"by_engine":by,"router_counts":reason,"signals":signals,"notes":["Combined fixed-rule validation only.","One active setup at a time; if Liquidity and FVG trigger on the same cycle, one CONFLUENCE signal is counted.","No parameter tuning; research only."]}
     p=Path("backtest/combined_gold_hunter_results.json");p.parent.mkdir(exist_ok=True);p.write_text(json.dumps(result,indent=2),encoding="utf-8");print(json.dumps(result,indent=2))
 if __name__=="__main__":main()
