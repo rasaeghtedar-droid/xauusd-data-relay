@@ -59,18 +59,18 @@ jobs:
       - name: Run RR bucket diagnostics
         run: |
           python scripts/fvg_rr_bucket_diagnostics.py
-      - name: Run FVG RR 2.0-2.5 capped diagnostic
+      - name: Run FVG RR 2-plus diagnostic
         env:
           FVG_ONLY_START_UTC: "2026-08-01T00:00:00+00:00"
           FVG_ONLY_END_UTC: "2026-09-09T23:59:59+00:00"
           COMBINED_SOURCE_URL: "https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv"
         run: |
-          python scripts/fvg_rr2_to_2_5_capped_diagnostics.py
-      - name: Print RR 2.0-2.5 capped diagnostic
+          python scripts/fvg_rr2_plus_diagnostics.py
+      - name: Print RR 2-plus diagnostic
         run: |
-          echo "===== FVG RR 2.0-2.5 CAPPED DIAGNOSTICS JSON ====="
-          cat backtest/fvg_rr2_to_2_5_capped_diagnostics.json
-          echo "===== END FVG RR 2.0-2.5 CAPPED DIAGNOSTICS JSON ====="
+          echo "===== FVG RR 2-PLUS DIAGNOSTICS JSON ====="
+          cat backtest/fvg_rr2_plus_diagnostics.json
+          echo "===== END FVG RR 2-PLUS DIAGNOSTICS JSON ====="
       - name: Print RR bucket diagnostics
         run: |
           echo "===== FVG RR BUCKET DIAGNOSTICS JSON ====="
@@ -118,4 +118,4 @@ jobs:
             backtest/fvg_target_diagnostics.json
             backtest/fvg_nearest_target_diagnostics.json
             backtest/fvg_rr_bucket_diagnostics.json
-            backtest/fvg_rr2_to_2_5_capped_diagnostics.json
+            backtest/fvg_rr2_plus_diagnostics.json
