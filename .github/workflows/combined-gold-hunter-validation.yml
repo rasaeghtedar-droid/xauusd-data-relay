@@ -1,0 +1,27 @@
+name: Combined Gold Hunter Validation
+
+on:
+  workflow_dispatch:
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout combined experiment branch
+        uses: actions/checkout@v4
+        with:
+          ref: experiment-fvg-setups
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run combined validation
+        run: python scripts/combined_gold_hunter_backtest.py
+      - name: Upload combined result
+        uses: actions/upload-artifact@v4
+        with:
+          name: combined-gold-hunter-results
+          path: backtest/combined_gold_hunter_results.json
+          if-no-files-found: error
