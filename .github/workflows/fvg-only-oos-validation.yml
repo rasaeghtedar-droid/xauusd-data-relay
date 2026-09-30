@@ -21,6 +21,11 @@ jobs:
         run: |
           set -o pipefail
           python scripts/fvg_only_gold_hunter_backtest.py | tee /tmp/fvg_only_oos_output.txt
+      - name: Print FVG-only result
+        run: |
+          echo "===== FVG-ONLY RESULT JSON ====="
+          cat backtest/fvg_only_gold_hunter_results.json
+          echo "===== END RESULT JSON ====="
       - name: Upload FVG-only result
         uses: actions/upload-artifact@v4
         with:
