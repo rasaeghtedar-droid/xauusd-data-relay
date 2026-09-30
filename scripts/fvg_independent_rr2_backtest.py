@@ -81,7 +81,6 @@ def main():
         f=fvg_at(m5,i)
         if f:
             t=pt(f["time"])
-            ctx=[x for x in m15 if pt(x["openTime"]) <= t.replace(tzinfo=t.tzinfo)][:0]
             # Use only M15 candles that closed before the FVG formation candle.
             from datetime import timedelta
             ctx=[x for x in m15 if pt(x["openTime"]) <= t-timedelta(minutes=15)][-30:]
