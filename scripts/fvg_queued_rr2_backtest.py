@@ -94,21 +94,27 @@ def main():
             orders.sort(key=lambda x:(x["order_created_index"], x["confirmation_time"]))
             chosen=None
             for o in orders:
+                touches_entry=(i>o["order_created_index"] and c["low"]<=o["entry"]<=c["high"])
                 invalid=(o["direction"]=="BUY" and c["low"]<=o["zone_lo"]) or (o["direction"]=="SELL" and c["high"]>=o["zone_hi"])
+                if touches_entry:
+                    chosen=o
+                    chosen["_fill_candle_invalidates"]=invalid
+                    break
                 if invalid:
                     o["status"]="CANCELLED_INVALIDATION"
-                    continue
-                if i>o["order_created_index"] and c["low"]<=o["entry"]<=c["high"]:
-                    chosen=o
-                    break
             orders=[o for o in orders if o.get("status")=="QUEUED"]
             if chosen is not None:
                 chosen["status"]="FILLED"
                 chosen["entry_index"]=i
                 chosen["fill_time"]=c["openTime"]
-                active=chosen
-                # Cancel other orders only if they are already invalid; otherwise keep them queued.
-                orders=[o for o in orders if o is not chosen]
+                if chosen.pop("_fill_candle_invalidates",False):
+                    # OHLC cannot establish intrabar order; mark conservatively ambiguous.
+                    chosen["outcome"]="AMBIGUOUS"
+                    chosen["exit_time"]=c["openTime"]
+                    trades.append(chosen)
+                    active=None
+                else:
+                    active=chosen
 
         i+=1
 
@@ -170,6 +176,7 @@ def main():
             "Orders are cancelled if price invalidates the FVG zone before fill.",
             "No upper RR cap.",
             "No future-candle scanning/lookahead.",
+            "If a fill candle also reaches the invalidation/stop boundary, outcome is AMBIGUOUS because OHLC cannot establish intrabar order.",
             "This is a research execution-policy test, not yet a production promotion.",
         ],
     }
