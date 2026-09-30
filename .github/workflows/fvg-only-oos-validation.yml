@@ -56,6 +56,14 @@ jobs:
           COMBINED_SOURCE_URL: "https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv"
         run: |
           python scripts/fvg_nearest_target_diagnostics.py
+      - name: Run RR bucket diagnostics
+        run: |
+          python scripts/fvg_rr_bucket_diagnostics.py
+      - name: Print RR bucket diagnostics
+        run: |
+          echo "===== FVG RR BUCKET DIAGNOSTICS JSON ====="
+          cat backtest/fvg_rr_bucket_diagnostics.json
+          echo "===== END FVG RR BUCKET DIAGNOSTICS JSON ====="
       - name: Print FVG-only diagnostics
         run: |
           echo "===== FVG-ONLY DIAGNOSTICS JSON ====="
@@ -97,3 +105,4 @@ jobs:
             backtest/fvg_confirmed_setups_performance.json
             backtest/fvg_target_diagnostics.json
             backtest/fvg_nearest_target_diagnostics.json
+            backtest/fvg_rr_bucket_diagnostics.json
