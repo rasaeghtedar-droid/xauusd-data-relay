@@ -28,11 +28,23 @@ jobs:
           COMBINED_SOURCE_URL: "https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv"
         run: |
           python scripts/fvg_only_diagnostics.py
+      - name: Run independent FVG lifecycle diagnostics
+        env:
+          FVG_ONLY_START_UTC: "2026-08-01T00:00:00+00:00"
+          FVG_ONLY_END_UTC: "2026-09-09T23:59:59+00:00"
+          COMBINED_SOURCE_URL: "https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv"
+        run: |
+          python scripts/fvg_independent_lifecycle_diagnostics.py
       - name: Print FVG-only diagnostics
         run: |
           echo "===== FVG-ONLY DIAGNOSTICS JSON ====="
           cat backtest/fvg_only_diagnostics.json
           echo "===== END FVG-ONLY DIAGNOSTICS JSON ====="
+      - name: Print independent FVG lifecycle diagnostics
+        run: |
+          echo "===== INDEPENDENT FVG LIFECYCLE JSON ====="
+          cat backtest/fvg_independent_lifecycle_diagnostics.json
+          echo "===== END INDEPENDENT FVG LIFECYCLE JSON ====="
       - name: Print FVG-only result
         run: |
           echo "===== FVG-ONLY RESULT JSON ====="
@@ -45,3 +57,4 @@ jobs:
           path: |
             backtest/fvg_only_gold_hunter_results.json
             backtest/fvg_only_diagnostics.json
+            backtest/fvg_independent_lifecycle_diagnostics.json
