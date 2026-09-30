@@ -23,6 +23,7 @@ jobs:
           COMBINED_END_UTC: "2026-09-09T23:59:59+00:00"
           COMBINED_SOURCE_URL: "https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv"
         run: |
+          set -o pipefail
           python scripts/combined_gold_hunter_backtest.py | tee /tmp/combined_oos_output.txt
 
       - name: Upload OOS result
