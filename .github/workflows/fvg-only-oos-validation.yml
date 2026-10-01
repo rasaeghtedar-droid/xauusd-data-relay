@@ -185,7 +185,7 @@ jobs:
       - name: Print executable FVG audit v4 result
         run: |
           echo "===== EXECUTABLE FVG AUDIT V4 RESULT JSON ====="
-          cat backtest/fvg_executable_audit_v4_results.json
+          cat backtest/fvg_temporal_audit_v4_results.json
           echo "===== END EXECUTABLE FVG AUDIT V4 RESULT ====="
       - name: Print realistic FVG RR2 result
         run: |
@@ -212,4 +212,4 @@ jobs:
             backtest/fvg_rr2_plus_diagnostics.json
             backtest/fvg_temporal_audit_v2_results.json
             backtest/fvg_temporal_audit_v3_results.json
-            backtest/fvg_executable_audit_v4_results.json
+            backtest/fvg_temporal_audit_v4_results.json
