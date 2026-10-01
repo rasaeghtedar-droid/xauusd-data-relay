@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Fixed-window stability reporting for the locked executable FVG V8 engine.
+"""Independent fixed-window stability validation for executable FVG V8.
 
-Each replay starts at the first available source candle and ends at the end of
-the available dataset. Reporting windows filter trades by confirmation time.
-This preserves the full prior-state/history of the V8 state machine and avoids
-warmup or boundary-state artifacts. No V8 rules are changed.
+Each window is replayed independently by the exact locked V8 engine, then
+validated for lifecycle invariants. No V8 rule, parameter, or entry/exit rule
+is changed. The OOS baseline window is required to reproduce the locked 130-
+trade result before the stability report is accepted.
 """
 from __future__ import annotations
 
@@ -12,7 +12,6 @@ import json
 import os
 import subprocess
 import sys
-from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,8 +19,10 @@ V8 = ROOT / "scripts" / "fvg_executable_audit_v8.py"
 RESULT = ROOT / "backtest" / "fvg_executable_audit_v8_results.json"
 OUT = ROOT / "backtest" / "fvg_v8_stability_windows_results.json"
 
-FULL_START = "2026-02-02T03:20:00+00:00"
-FULL_END = "2026-09-09T23:59:59+00:00"
+SOURCE = os.getenv(
+    "COMBINED_SOURCE_URL",
+    "https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv",
+)
 
 WINDOWS = [
     ("PRE_OOS_MAY_JUL", "2026-05-01T00:00:00+00:00", "2026-07-31T23:59:59+00:00"),
@@ -32,17 +33,12 @@ WINDOWS = [
     ("OOS_BASELINE", "2026-08-01T00:00:00+00:00", "2026-09-09T23:59:59+00:00"),
 ]
 
-def pt(s: str) -> datetime:
-    return datetime.fromisoformat(s.replace("Z", "+00:00"))
-
-def run_full_replay() -> dict:
+def run_window(name: str, start: str, end: str) -> dict:
     env = os.environ.copy()
-    env["FVG_ONLY_START_UTC"] = FULL_START
-    env["FVG_ONLY_END_UTC"] = FULL_END
-    env["COMBINED_SOURCE_URL"] = os.getenv(
-        "COMBINED_SOURCE_URL",
-        "https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv",
-    )
+    env["FVG_ONLY_START_UTC"] = start
+    env["FVG_ONLY_END_UTC"] = end
+    env["COMBINED_SOURCE_URL"] = SOURCE
+
     subprocess.run(
         [sys.executable, str(V8)],
         cwd=ROOT,
@@ -50,73 +46,82 @@ def run_full_replay() -> dict:
         check=True,
         stdout=subprocess.DEVNULL,
     )
-    result = json.loads(RESULT.read_text(encoding="utf-8"))
-    if result.get("status") != "COMPLETED":
-        raise RuntimeError(f"V8 status={result.get('status')}")
-    inv = result.get("invariants", {})
-    if inv.get("status") != "PASS" or inv.get("errors") or not inv.get("rr_consistent") or not inv.get("no_overlap"):
-        raise RuntimeError(f"V8 invariant failure: {inv}")
-    return result
 
-def summarize(window, trades):
-    start = pt(window[1]); end = pt(window[2])
-    ss = [t for t in trades if start <= pt(t["confirmation_time"]) <= end]
-    tp = sum(t["outcome"] == "TP" for t in ss)
-    sl = sum(t["outcome"] == "SL" for t in ss)
-    amb = sum(t["outcome"] == "AMBIGUOUS" for t in ss)
-    op = sum(t["outcome"] == "OPEN_AT_DATA_END" for t in ss)
-    net = sum(t["rr"] if t["outcome"] == "TP" else -1 if t["outcome"] == "SL" else 0 for t in ss)
+    result = json.loads(RESULT.read_text(encoding="utf-8"))
+    inv = result.get("invariants", {})
+    if result.get("status") != "COMPLETED":
+        raise RuntimeError(f"{name}: V8 status={result.get('status')}")
+    if inv.get("status") != "PASS" or inv.get("errors") or not inv.get("rr_consistent") or not inv.get("no_overlap"):
+        raise RuntimeError(f"{name}: invariant failure: {inv}")
+
+    overall = result["overall"]
     return {
-        "name": window[0],
-        "start_utc": window[1],
-        "end_utc": window[2],
-        "signals": len(ss),
-        "tp": tp,
-        "sl": sl,
-        "ambiguous": amb,
-        "open_at_data_end": op,
-        "win_rate": round(100 * tp / (tp + sl), 2) if tp + sl else None,
-        "net_r": round(net, 2),
-        "conservative_net_r": round(net - amb, 2),
-        "avg_rr": round(sum(t["rr"] for t in ss) / len(ss), 2) if ss else None,
-        "invariants": {
-            "status": "PASS",
-            "errors": [],
-            "rr_consistent": True,
-            "no_overlap": True,
-        },
+        "name": name,
+        "start_utc": start,
+        "end_utc": end,
+        "signals": overall["signals"],
+        "tp": overall["tp"],
+        "sl": overall["sl"],
+        "ambiguous": overall["ambiguous"],
+        "open_at_data_end": overall["open_at_data_end"],
+        "win_rate": overall["win_rate"],
+        "net_r": overall["net_r"],
+        "conservative_net_r": overall["conservative_net_r"],
+        "avg_rr": overall["avg_rr"],
+        "confirmations": result["lifecycle"]["confirmations"],
+        "missed_or_competing_opportunities": result["lifecycle"]["missed_or_competing_opportunities"],
+        "invalidated_pending_fvgs": result["lifecycle"]["invalidated_pending_fvgs"],
+        "remaining_pending_fvgs": result["lifecycle"]["remaining_pending_fvgs"],
+        "invariants": inv,
     }
 
 def main() -> None:
-    result = run_full_replay()
-    rows = [summarize(w, result["trades"]) for w in WINDOWS]
+    rows = [run_window(*w) for w in WINDOWS]
+
+    baseline = next(r for r in rows if r["name"] == "OOS_BASELINE")
+    baseline_guard = {
+        "expected_signals": 130,
+        "actual_signals": baseline["signals"],
+        "matches_locked_baseline": baseline["signals"] == 130,
+        "expected_status": "PASS",
+    }
+    if not baseline_guard["matches_locked_baseline"]:
+        raise RuntimeError(
+            "OOS_BASELINE did not reproduce the locked 130-trade V8 result: "
+            + json.dumps(baseline_guard)
+        )
+
+    stability_rows = [r for r in rows if r["name"] != "OOS_BASELINE"]
+    closed = [r for r in stability_rows if r["tp"] + r["sl"] > 0]
+    summary = {
+        "windows": len(stability_rows),
+        "windows_with_signals": sum(r["signals"] > 0 for r in stability_rows),
+        "windows_with_closed_trades": len(closed),
+        "positive_net_r_windows": sum(r["net_r"] > 0 for r in closed),
+        "negative_net_r_windows": sum(r["net_r"] < 0 for r in closed),
+        "zero_net_r_windows": sum(r["net_r"] == 0 for r in closed),
+        "total_signals_across_stability_windows": sum(r["signals"] for r in stability_rows),
+        "baseline_signals": baseline["signals"],
+        "baseline_net_r": baseline["net_r"],
+    }
+
     payload = {
         "status": "COMPLETED",
         "research_only": True,
         "engine": "FVG_EXECUTABLE_AUDIT_V8",
-        "method": "one full-history V8 replay; report fixed confirmation-time windows; no parameter tuning",
-        "source": os.getenv(
-            "COMBINED_SOURCE_URL",
-            "https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv",
-        ),
-        "full_replay": {
-            "start_utc": FULL_START,
-            "end_utc": FULL_END,
-            "signals": result["overall"]["signals"],
-            "tp": result["overall"]["tp"],
-            "sl": result["overall"]["sl"],
-            "ambiguous": result["overall"]["ambiguous"],
-            "net_r": result["overall"]["net_r"],
-            "invariants": result["invariants"],
-        },
+        "method": "independent fixed-window replays using the exact locked V8 engine; no parameter tuning",
+        "source": SOURCE,
+        "baseline_guard": baseline_guard,
+        "summary": summary,
         "windows": rows,
         "notes": [
-            "All windows are slices of the same full-history state-machine replay.",
-            "Confirmation time is the window membership key.",
-            "This avoids restarting V8 at each window and avoids boundary-state/warmup artifacts.",
-            "OOS_BASELINE should reconcile exactly to the locked 130-trade V8 result.",
+            "Each window is intentionally replayed independently, matching the locked OOS baseline methodology.",
+            "Windows are used for stability evidence, not to aggregate a single portfolio result.",
+            "The OOS_BASELINE must reproduce the locked 130-trade result or this test fails.",
+            "No production or V8 rule is modified by this validation.",
         ],
     }
+
     OUT.parent.mkdir(exist_ok=True)
     OUT.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     print(json.dumps(payload, indent=2))
