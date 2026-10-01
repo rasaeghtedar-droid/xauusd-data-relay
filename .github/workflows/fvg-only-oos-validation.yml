@@ -213,18 +213,6 @@ jobs:
           echo "===== EXECUTABLE FVG AUDIT V6 RESULT JSON ====="
           cat backtest/fvg_executable_audit_v6_results.json
           echo "===== END EXECUTABLE FVG AUDIT V6 RESULT ====="
-      - name: Run executable FVG audit v7
-        env:
-          FVG_ONLY_START_UTC: "2026-08-01T00:00:00+00:00"
-          FVG_ONLY_END_UTC: "2026-09-09T23:59:59+00:00"
-          COMBINED_SOURCE_URL: "https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv"
-        run: |
-          python scripts/fvg_executable_audit_v7.py
-      - name: Print executable FVG audit v7 result
-        run: |
-          echo "===== EXECUTABLE FVG AUDIT V7 RESULT JSON ====="
-          cat backtest/fvg_executable_audit_v7_results.json
-          echo "===== END V7 ====="
       - name: Run executable FVG audit v8
         env:
           FVG_ONLY_START_UTC: "2026-08-01T00:00:00+00:00"
