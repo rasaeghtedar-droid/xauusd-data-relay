@@ -101,6 +101,7 @@ def main():
         # queued and their old entry is never reused.
         if had_active_at_open:
             missed_confirmations += len(confirmed)
+            i += 1
             continue
 
         # No active trade at candle start. At most one newly confirmed FVG
