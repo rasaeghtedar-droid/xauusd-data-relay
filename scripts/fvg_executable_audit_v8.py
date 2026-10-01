@@ -80,7 +80,7 @@ def main():
                 rr_raw=(tp-entry)/(entry-sl) if d=="BUY" else (entry-tp)/(sl-entry)
                 if rr_raw < 2.0: continue
                 entry_r=round(entry,3); sl_r=round(sl,3); tp_r=round(tp,3); rr=round(rr_raw,2)
-                confirmed.append({**f,"confirmation_index":i,"confirmation_time":c["openTime"],"entry":entry_r,"sl":sl_r,"tp":tp_r,"rr":rr})
+                confirmed.append({**f,"confirmation_index":i,"confirmation_time":c["openTime"],"entry":entry_r,"sl":sl_r,"tp":tp_r,"rr":rr,"_raw_entry":entry,"_raw_sl":sl,"_raw_tp":tp})
 
         # A setup confirmed while a trade was active is missed, even if that trade just exited.
         if had_active:
@@ -91,7 +91,7 @@ def main():
             active={"engine":"FVG_EXECUTABLE_AUDIT_V8","direction":s["direction"],
                     "formation_time":s["time"],"confirmation_time":s["confirmation_time"],
                     "entry":s["entry"],"sl":s["sl"],"tp":s["tp"],
-                    "rr":round(s["rr"],2),"confirmation_index":i,"entry_index":i,
+                    "rr":round(s["rr"],2),"confirmation_index":i,"entry_index":i,"_raw_entry":s["_raw_entry"],"_raw_sl":s["_raw_sl"],"_raw_tp":s["_raw_tp"],
                     "entry_time":c["openTime"],"zone_lo":s["lo"],"zone_hi":s["hi"]}
             missed+=max(0,len(confirmed)-1)
 
@@ -114,7 +114,7 @@ def main():
     # Invariants before publishing.
     errors=[]; prev_exit=None
     for n,t in enumerate(trades):
-        d=t["direction"]; e=t["entry"]; s=t["sl"]; q=t["tp"]
+        d=t["direction"]; e=t.get("_raw_entry",t["entry"]); s=t.get("_raw_sl",t["sl"]); q=t.get("_raw_tp",t["tp"])
         rr=(q-e)/(e-s) if d=="BUY" else (e-q)/(s-e)
         if abs(round(rr,2)-t["rr"])>0.005: errors.append(f"RR_MISMATCH:{n}")
         if rr<2: errors.append(f"RR_LT_2:{n}")
