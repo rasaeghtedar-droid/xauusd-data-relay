@@ -16,6 +16,7 @@ from fvg_only_gold_hunter_backtest import load,agg,fvg_at,target,pt,PAD,LOOKBACK
 
 START=os.getenv("FVG_ONLY_START_UTC")
 END=os.getenv("FVG_ONLY_END_UTC")
+SOURCE=os.getenv("COMBINED_SOURCE_URL")
 
 def main():
     m5=load()
@@ -118,7 +119,7 @@ def main():
     for d in ("BUY","SELL"):
         ss=[x for x in trades if x["direction"]==d];w=sum(x["outcome"]=="TP" for x in ss);l=sum(x["outcome"]=="SL" for x in ss)
         by[d]={"signals":len(ss),"tp":w,"sl":l,"ambiguous":sum(x["outcome"]=="AMBIGUOUS" for x in ss),"open_at_data_end":sum(x["outcome"]=="OPEN_AT_DATA_END" for x in ss),"win_rate":round(100*w/(w+l),2) if w+l else None,"net_r":round(sum(x["rr"] if x["outcome"]=="TP" else -1 if x["outcome"]=="SL" else 0 for x in ss),2)}
-    result={"status":"COMPLETED","research_only":True,"validation_start_utc":START,"validation_end_utc":END,
+    result={"status":"COMPLETED","research_only":True,"source":SOURCE,"validation_start_utc":START,"validation_end_utc":END,
       "audit_rule":{"confirmation_candle_cannot_fill":True,"earliest_fill":"strictly_later_closed_candle","exit_evaluation":"starts_after_fill","one_active_trade":True,"queue":False,"lookahead":False},
       "overall":{"signals":len(trades),"tp":tp_n,"sl":sl_n,"ambiguous":amb_n,"open_at_data_end":open_n,"win_rate":round(100*tp_n/(tp_n+sl_n),2) if tp_n+sl_n else None,"net_r":round(net,2),"conservative_net_r":round(net-amb_n,2),"avg_rr":round(sum(x["rr"] for x in trades)/len(trades),2) if trades else None},
       "by_direction":by,
@@ -126,4 +127,7 @@ def main():
       "trades":trades}
     p=Path("backtest/fvg_temporal_audit_results.json");p.parent.mkdir(exist_ok=True);p.write_text(json.dumps(result,indent=2),encoding="utf-8");print(json.dumps(result,indent=2))
 
-if __name__=="__main__":main()
+if __name__=="__main__":
+    if not SOURCE:
+        raise RuntimeError("COMBINED_SOURCE_URL is required for temporal audit")
+    main()
