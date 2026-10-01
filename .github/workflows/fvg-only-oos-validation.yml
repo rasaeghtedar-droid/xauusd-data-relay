@@ -226,14 +226,14 @@ jobs:
           echo "===== EXECUTABLE FVG AUDIT V8 RESULT JSON ====="
           cat backtest/fvg_executable_audit_v8_results.json
           echo "===== END V8 ====="
-      - name: Reconcile realistic vs executable V6
+      - name: Reconcile realistic vs executable V8
         run: |
           python scripts/reconcile_realistic_vs_audit_v6.py
-      - name: Print first V6 divergence
+      - name: Print first V8 divergence
         run: |
-          echo "===== REALISTIC VS AUDIT V6 RECONCILIATION ====="
-          cat backtest/fvg_realistic_vs_audit_v6_reconciliation.json
-          echo "===== END RECONCILIATION ====="
+          echo "===== REALISTIC VS AUDIT V8 RECONCILIATION ====="
+          cat backtest/fvg_realistic_vs_audit_v8_reconciliation.json
+          echo "===== END V8 RECONCILIATION ====="
       - name: Print realistic FVG RR2 result
         run: |
           echo "===== REALISTIC FVG RR2 RESULT JSON ====="
