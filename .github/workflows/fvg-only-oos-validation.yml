@@ -244,6 +244,22 @@ jobs:
         run: |
           echo "===== FVG V8 FROZEN COHORT TARGET SENSITIVITY JSON ====="
           cat backtest/fvg_v8_frozen_cohort_target_sensitivity_results.json
+
+      - name: Print V8 frozen cohort concise summary
+        run: |
+          python - <<'PY'
+          import json
+          p = "backtest/fvg_v8_frozen_cohort_target_sensitivity_results.json"
+          d = json.load(open(p, encoding="utf-8"))
+          print("===== V8 FROZEN COHORT CONCISE SUMMARY =====")
+          print("STATUS:", d["status"])
+          print("LOCKED SIGNALS:", d["locked_cohort"]["signals"])
+          print("FROZEN:", d["locked_cohort"]["frozen"])
+          print("INVARIANTS:", d["invariants"])
+          for m in d["models"]:
+              print(m["model"], "| signals=", m["signals"], "| TP=", m["tp"], "| SL=", m["sl"], "| AMB=", m["ambiguous"], "| WR=", m["win_rate"], "| NET_R=", m["net_r"], "| CONS_NET_R=", m["conservative_net_r"], "| AVG_RR=", m["avg_realized_rr"])
+          print("===== END CONCISE SUMMARY =====")
+          PY
           echo "===== END FVG V8 FROZEN COHORT TARGET SENSITIVITY ====="
 
       - name: Run V8 target sensitivity replay
