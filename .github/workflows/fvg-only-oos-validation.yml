@@ -245,6 +245,17 @@ jobs:
           echo "===== FVG V8 TARGET SENSITIVITY JSON ====="
           cat backtest/fvg_v8_target_sensitivity_results.json
           echo "===== END FVG V8 TARGET SENSITIVITY ====="
+      - name: Print V8 target sensitivity summary
+        run: |
+          python - <<'PY'
+          import json
+          p = "backtest/fvg_v8_target_sensitivity_results.json"
+          d = json.load(open(p))
+          print("===== V8 TARGET SENSITIVITY SUMMARY =====")
+          print("baseline_guard:", d["baseline_guard"])
+          for m in d["models"]:
+              print({k: m.get(k) for k in ("model","signals","tp","sl","ambiguous","win_rate","net_r","conservative_net_r","avg_realized_rr","max_trade_path_dd_r")})
+          print("===== END V8 TARGET SENSITIVITY SUMMARY =====")
       - name: Print executable FVG audit v8 result
         run: |
           echo "===== EXECUTABLE FVG AUDIT V8 RESULT JSON ====="
