@@ -258,4 +258,37 @@ jobs:
             backtest/fvg_rr2_plus_diagnostics.json
             backtest/fvg_temporal_audit_v2_results.json
             backtest/fvg_temporal_audit_v3_results.json
+            backtest/fvg_temporal_audit_v4_results.json      - name: Reconcile realistic vs executable V6
+        run: |
+          python scripts/reconcile_realistic_vs_audit_v6.py
+      - name: Print first V6 divergence
+        run: |
+          echo "===== REALISTIC VS AUDIT V6 RECONCILIATION ====="
+          cat backtest/fvg_realistic_vs_audit_v6_reconciliation.json
+          echo "===== END RECONCILIATION ====="
+      - name: Print realistic FVG RR2 result
+        run: |
+          echo "===== REALISTIC FVG RR2 RESULT JSON ====="
+          cat backtest/fvg_realistic_rr2_results.json
+          echo "===== END REALISTIC FVG RR2 RESULT ====="
+      - name: Print FVG-only result
+        run: |
+          echo "===== FVG-ONLY RESULT JSON ====="
+          cat backtest/fvg_only_gold_hunter_results.json
+          echo "===== END FVG-ONLY RESULT JSON ====="
+      - name: Upload FVG-only result
+        uses: actions/upload-artifact@v4
+        with:
+          name: fvg-only-oos-results
+          path: |
+            backtest/fvg_only_gold_hunter_results.json
+            backtest/fvg_only_diagnostics.json
+            backtest/fvg_independent_lifecycle_diagnostics.json
+            backtest/fvg_confirmed_setups_performance.json
+            backtest/fvg_target_diagnostics.json
+            backtest/fvg_nearest_target_diagnostics.json
+            backtest/fvg_rr_bucket_diagnostics.json
+            backtest/fvg_rr2_plus_diagnostics.json
+            backtest/fvg_temporal_audit_v2_results.json
+            backtest/fvg_temporal_audit_v3_results.json
             backtest/fvg_temporal_audit_v4_results.json
