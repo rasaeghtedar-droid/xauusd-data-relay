@@ -55,6 +55,18 @@ jobs:
         run: |
           set -o pipefail
           python scripts/fvg_realistic_rr2_backtest.py | tee /tmp/fvg_realistic_rr2_output.txt
+      - name: Run temporal FVG audit
+        env:
+          FVG_ONLY_START_UTC: "2026-08-01T00:00:00+00:00"
+          FVG_ONLY_END_UTC: "2026-09-09T23:59:59+00:00"
+        run: |
+          set -o pipefail
+          python scripts/fvg_temporal_audit_rr2.py | tee /tmp/fvg_temporal_audit_output.txt
+      - name: Print temporal FVG audit result
+        run: |
+          echo "===== TEMPORAL FVG AUDIT RESULT JSON ====="
+          cat backtest/fvg_temporal_audit_results.json
+          echo "===== END TEMPORAL FVG AUDIT RESULT ====="
       - name: Print realistic FVG RR2 result
         run: |
           echo "===== REALISTIC FVG RR2 RESULT JSON ====="
