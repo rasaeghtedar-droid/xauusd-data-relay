@@ -59,6 +59,7 @@ jobs:
         env:
           FVG_ONLY_START_UTC: "2026-08-01T00:00:00+00:00"
           FVG_ONLY_END_UTC: "2026-09-09T23:59:59+00:00"
+          COMBINED_SOURCE_URL: "https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv"
         run: |
           set -o pipefail
           python scripts/fvg_temporal_audit_rr2.py | tee /tmp/fvg_temporal_audit_output.txt
