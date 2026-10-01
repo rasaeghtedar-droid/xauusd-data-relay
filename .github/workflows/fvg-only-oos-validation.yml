@@ -232,6 +232,20 @@ jobs:
           echo "===== FVG V8 STABILITY WINDOWS JSON ====="
           cat backtest/fvg_v8_stability_windows_results.json
           echo "===== END FVG V8 STABILITY WINDOWS ====="
+      - name: Run V8 frozen cohort target sensitivity
+        env:
+          FVG_ONLY_START_UTC: "2026-08-01T00:00:00+00:00"
+          FVG_ONLY_END_UTC: "2026-09-09T23:59:59+00:00"
+          COMBINED_SOURCE_URL: "https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv"
+        run: |
+          set -o pipefail
+          python scripts/fvg_v8_frozen_cohort_target_sensitivity.py | tee /tmp/fvg_v8_frozen_cohort_target_sensitivity_output.txt
+      - name: Print V8 frozen cohort target sensitivity
+        run: |
+          echo "===== FVG V8 FROZEN COHORT TARGET SENSITIVITY JSON ====="
+          cat backtest/fvg_v8_frozen_cohort_target_sensitivity_results.json
+          echo "===== END FVG V8 FROZEN COHORT TARGET SENSITIVITY ====="
+
       - name: Run V8 target sensitivity replay
         env:
           FVG_ONLY_START_UTC: "2026-08-01T00:00:00+00:00"
