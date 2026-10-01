@@ -76,9 +76,10 @@ def main():
                 tp=target(d,entry,sl,f["ctx"])
                 pending.pop(fid,None)
                 if tp is None: continue
-                entry_r=round(entry,3); sl_r=round(sl,3); tp_r=round(tp,3)
-                rr=(tp_r-entry_r)/(entry_r-sl_r) if d=="BUY" else (entry_r-tp_r)/(sl_r-entry_r)
-                if rr < 2.0: continue
+                # Use raw execution prices for target/RR; round only for persisted display.
+                rr_raw=(tp-entry)/(entry-sl) if d=="BUY" else (entry-tp)/(sl-entry)
+                if rr_raw < 2.0: continue
+                entry_r=round(entry,3); sl_r=round(sl,3); tp_r=round(tp,3); rr=round(rr_raw,2)
                 confirmed.append({**f,"confirmation_index":i,"confirmation_time":c["openTime"],"entry":entry_r,"sl":sl_r,"tp":tp_r,"rr":rr})
 
         # A setup confirmed while a trade was active is missed, even if that trade just exited.
