@@ -24,6 +24,7 @@ def main():
     m15=agg(m5,15)
 
     pending=[]
+    resting=None
     active=None
     trades=[]
     missed=0
@@ -33,8 +34,9 @@ def main():
 
     while i<len(m5):
         c=m5[i]
+        start_active = active is not None
 
-        # Exit only a trade that was already filled before this candle.
+        # Exit an already-filled trade. Exit evaluation starts strictly after entry.
         if active is not None:
             sl=(c["low"]<=active["sl"]) if active["direction"]=="BUY" else (c["high"]>=active["sl"])
             tp=(c["high"]>=active["tp"]) if active["direction"]=="BUY" else (c["low"]<=active["tp"])
@@ -45,7 +47,29 @@ def main():
             elif tp:
                 active["outcome"]="TP";active["exit_time"]=c["openTime"];trades.append(active);active=None
 
-        # 1) Existing pending FVGs: invalidate OR confirm.
+        # A resting order can fill only after its confirmation candle.
+        if resting is not None:
+            invalid=(resting["direction"]=="BUY" and c["low"]<=resting["lo"]) or (resting["direction"]=="SELL" and c["high"]>=resting["hi"])
+            if invalid:
+                resting=None
+            elif i>resting["confirmation_index"] and c["low"]<=resting["mid"]<=c["high"] and active is None:
+                active={
+                    "engine":"FVG_TEMPORAL_AUDIT_RR2",
+                    "direction":resting["direction"],
+                    "formation_time":resting["time"],
+                    "confirmation_time":resting["confirmation_time"],
+                    "entry":round(resting["mid"],3),
+                    "sl":round(resting["sl"],3),
+                    "tp":round(resting["tp"],3),
+                    "rr":round(resting["rr"],2),
+                    "confirmation_index":resting["confirmation_index"],
+                    "entry_index":i,
+                    "entry_time":c["openTime"],
+                    "zone_lo":resting["lo"],"zone_hi":resting["hi"],
+                }
+                resting=None
+
+        # Existing pending FVG lifecycle.
         confirmed=[]
         still=[]
         for f in pending:
@@ -66,59 +90,22 @@ def main():
             still.append(f)
         pending=still
 
-        # 2) If a trade is already open at the start of this candle,
-        # confirmations are missed. Their old entry is never reused.
-        # (active may have just closed above, so we need the start-state flag.)
-        # We reconstruct it from entry index.
-        # To avoid ambiguity, use a dedicated flag stored before exit.
-        # This branch is handled below by checking whether the active trade
-        # existed at the start of the candle.
-        # NOTE: start_active is initialized at top of loop on first pass below.
-        if 'start_active' in locals() and start_active:
+        # A trade that was active at candle start blocks all new confirmations,
+        # even if it closes during this candle. No retroactive entry.
+        if start_active or active is not None:
             missed+=len(confirmed)
-        elif active is None and confirmed:
+        elif resting is None and confirmed:
             confirmed.sort(key=lambda x:(x["confirmation_index"],x["formed_index"]))
-            s=confirmed[0]
-            # Create a resting order. It may NOT fill on confirmation candle.
-            s["status"]="QUEUED_RESTING"
-            pending_orders=[s]
-            # Keep other confirmed orders as missed; no queue.
+            resting=confirmed[0]
             missed+=max(0,len(confirmed)-1)
-            # Fill the oldest resting order only on a strictly later candle.
-            # Store it separately for the next loop.
-            resting=pending_orders[0]
-        else:
-            # If active exists, confirmed opportunities are missed.
-            missed+=len(confirmed)
 
-        # Fill a resting order only on a later candle, then evaluate exits
-        # starting from the following candle.
-        if 'resting' in locals() and resting is not None and active is None and i>resting["confirmation_index"]:
-            active={
-                "engine":"FVG_TEMPORAL_AUDIT_RR2",
-                "direction":resting["direction"],
-                "formation_time":resting["time"],
-                "confirmation_time":resting["confirmation_time"],
-                "entry":round(resting["mid"],3),
-                "sl":round(resting["sl"],3),
-                "tp":round(resting["tp"],3),
-                "rr":round(resting["rr"],2),
-                "confirmation_index":resting["confirmation_index"],
-                "entry_index":i,
-                "entry_time":c["openTime"],
-                "zone_lo":resting["lo"],
-                "zone_hi":resting["hi"],
-            }
-            resting=None
-
-        # New FVG forms at the end of this closed candle.
+        # New FVG forms only after this candle closes.
         f=fvg_at(m5,i)
         if f:
             t=pt(f["time"])
             ctx=[x for x in m15 if pt(x["openTime"])<=t-timedelta(minutes=15)][-LOOKBACK:]
             pending.append({**f,"ctx":ctx,"formed_index":i})
 
-        start_active=active is not None
         i+=1
 
     if active is not None:
@@ -135,7 +122,7 @@ def main():
       "audit_rule":{"confirmation_candle_cannot_fill":True,"earliest_fill":"strictly_later_closed_candle","exit_evaluation":"starts_after_fill","one_active_trade":True,"queue":False,"lookahead":False},
       "overall":{"signals":len(trades),"tp":tp_n,"sl":sl_n,"ambiguous":amb_n,"open_at_data_end":open_n,"win_rate":round(100*tp_n/(tp_n+sl_n),2) if tp_n+sl_n else None,"net_r":round(net,2),"conservative_net_r":round(net-amb_n,2),"avg_rr":round(sum(x["rr"] for x in trades)/len(trades),2) if trades else None},
       "by_direction":by,
-      "lifecycle":{"confirmations":confirmations,"missed_or_competing_opportunities":missed,"invalidated_pending_fvgs":invalidated,"remaining_pending_fvgs":len(pending)},
+      "lifecycle":{"confirmations":confirmations,"missed_or_competing_opportunities":missed,"invalidated_pending_fvgs":invalidated,"remaining_pending_fvgs":len(pending),"resting_order_at_end":resting is not None},
       "trades":trades}
     p=Path("backtest/fvg_temporal_audit_results.json");p.parent.mkdir(exist_ok=True);p.write_text(json.dumps(result,indent=2),encoding="utf-8");print(json.dumps(result,indent=2))
 
