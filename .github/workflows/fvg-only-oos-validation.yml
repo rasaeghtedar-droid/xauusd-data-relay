@@ -232,6 +232,32 @@ jobs:
           echo "===== FVG V8 STABILITY WINDOWS JSON ====="
           cat backtest/fvg_v8_stability_windows_results.json
           echo "===== END FVG V8 STABILITY WINDOWS ====="
+      - name: Run V8 trade-path realism diagnostics
+        env:
+          FVG_ONLY_START_UTC: "2026-08-01T00:00:00+00:00"
+          FVG_ONLY_END_UTC: "2026-09-09T23:59:59+00:00"
+          COMBINED_SOURCE_URL: "https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv"
+        run: |
+          set -o pipefail
+          python scripts/fvg_v8_trade_path_diagnostics.py | tee /tmp/fvg_v8_trade_path_diagnostics_output.txt
+      - name: Print V8 trade-path realism summary
+        run: |
+          python - <<'PY'
+          import json
+          p = "backtest/fvg_v8_trade_path_diagnostics.json"
+          d = json.load(open(p, encoding="utf-8"))
+          print("===== V8 TRADE-PATH REALISM SUMMARY =====")
+          print("STATUS:", d["status"])
+          print("BASELINE SIGNALS:", d["baseline_signals"])
+          print("OVERALL:", d["overall"])
+          print("HOLD_BUCKETS:", d["hold_duration_buckets"])
+          print("RR_BUCKETS:", d["rr_buckets"])
+          print("BUY:", d["by_direction"]["BUY"])
+          print("SELL:", d["by_direction"]["SELL"])
+          print("INVARIANTS:", d["invariants"])
+          print("===== END V8 TRADE-PATH REALISM SUMMARY =====")
+          PY
+
       - name: Run V8 frozen cohort target sensitivity
         env:
           FVG_ONLY_START_UTC: "2026-08-01T00:00:00+00:00"
