@@ -30,7 +30,9 @@ def main():
     # Precompute time -> M15 index. This replaces a full M15 scan for every FVG.
     m15_times=[pt(x["openTime"]) for x in m15]
     pending={}
-    mid_index={"BUY":[], "SELL":[]}  # sorted (mid, id); stale entries are lazy-deleted
+    mid_index={"BUY":[], "SELL":[]}  # sorted (mid, id)
+    buy_invalid_index=[]  # sorted (-lo, id): BUY invalidates when candle low <= lo
+    sell_invalid_index=[]  # sorted (hi, id): SELL invalidates when candle high >= hi
     next_id=0
 
     trades=[]
@@ -55,6 +57,23 @@ def main():
                 active["outcome"]="TP"; active["exit_time"]=c["openTime"]; trades.append(active); active=None
 
         confirmed=[]
+
+        # Invalidate pending FVGs first using indexed zone boundaries.
+        buy_cut=bisect.bisect_right(buy_invalid_index,(-c["low"],10**18))
+        for neg_lo,fid in buy_invalid_index[:buy_cut]:
+            f=pending.pop(fid,None)
+            if f is not None:
+                invalidated_pending += 1
+        if buy_cut:
+            buy_invalid_index=buy_invalid_index[buy_cut:]
+
+        sell_cut=bisect.bisect_right(sell_invalid_index,(c["high"],10**18))
+        for hi,fid in sell_invalid_index[:sell_cut]:
+            f=pending.pop(fid,None)
+            if f is not None:
+                invalidated_pending += 1
+        if sell_cut:
+            sell_invalid_index=sell_invalid_index[sell_cut:]
 
         # Only inspect pending FVGs whose midpoint can actually be inside this candle.
         for d in ("BUY","SELL"):
@@ -106,6 +125,10 @@ def main():
             fid=next_id; next_id+=1
             pending[fid]={**f,"ctx":ctx,"formed_index":i}
             bisect.insort(mid_index[f["direction"]],(f["mid"],fid))
+            if f["direction"]=="BUY":
+                bisect.insort(buy_invalid_index,(-f["lo"],fid))
+            else:
+                bisect.insort(sell_invalid_index,(f["hi"],fid))
 
         # Confirmations occurring while a trade was already open are missed.
         if had_active:
