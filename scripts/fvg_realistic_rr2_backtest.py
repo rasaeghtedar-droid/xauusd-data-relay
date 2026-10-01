@@ -144,16 +144,9 @@ def main():
             s["entry_time"]=c["openTime"]
             s.pop("_formation_index",None)
 
-            sl=(c["low"]<=s["sl"]) if s["direction"]=="BUY" else (c["high"]>=s["sl"])
-            tp=(c["high"]>=s["tp"]) if s["direction"]=="BUY" else (c["low"]<=s["tp"])
-            if sl and tp:
-                s["outcome"]="AMBIGUOUS"; s["exit_time"]=c["openTime"]; trades.append(s)
-            elif sl:
-                s["outcome"]="SL"; s["exit_time"]=c["openTime"]; trades.append(s)
-            elif tp:
-                s["outcome"]="TP"; s["exit_time"]=c["openTime"]; trades.append(s)
-            else:
-                active=s
+            # The confirmation/entry candle cannot also resolve the trade.
+            # Exit evaluation starts on the first strictly later closed M5 candle.
+            active=s
             missed_confirmations += max(0,len(confirmed)-1)
 
         i += 1
@@ -190,7 +183,7 @@ def main():
             "pending_fvg_survives_active_trade":True,
             "entry_model":"confirmed FVG midpoint on confirmation candle",
             "lookahead":False,
-            "same_candle":"SL if entry+SL; TP if entry+TP; AMBIGUOUS if entry+SL+TP"
+            "same_candle_exit":"PROHIBITED; exit evaluation starts on the first closed M5 candle strictly after entry"
         },
         "overall":{
             "signals":len(trades),"tp":tp_n,"sl":sl_n,"ambiguous":amb_n,
