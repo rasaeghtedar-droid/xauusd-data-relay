@@ -221,6 +221,14 @@ jobs:
         run: |
           set -o pipefail
           python scripts/fvg_executable_audit_v8.py | tee /tmp/fvg_executable_audit_v8_output.txt
+      - name: Run V8 Cap4 stability replay
+        run: |
+          python scripts/fvg_v8_cap4_stability.py | tee /tmp/fvg_v8_cap4_stability_output.txt
+
+      - name: Print V8 Cap4 stability summary
+        run: |
+          cat backtest/fvg_v8_cap4_stability_results.json
+
       - name: Run V8 stability windows
         env:
           COMBINED_SOURCE_URL: "https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv"
