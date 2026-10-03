@@ -21,6 +21,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import fvg_executable_audit_v8 as v8
+import fvg_only_gold_hunter_backtest as base
 
 SOURCE = os.getenv(
     "COMBINED_SOURCE_URL",
@@ -48,7 +49,9 @@ def run_model(start, end, cap4):
         return min(structural, cap_tp) if direction == "BUY" else max(structural, cap_tp)
     v8.target = capped
     old_start, old_end, old_source = v8.START, v8.END, v8.SOURCE
+    old_url = base.URL
     v8.START, v8.END, v8.SOURCE = start, end, SOURCE
+    base.URL = SOURCE
     try:
         v8.main()
         result = json.loads((ROOT / "backtest/fvg_executable_audit_v8_results.json").read_text())
@@ -56,6 +59,7 @@ def run_model(start, end, cap4):
     finally:
         v8.target = old_target
         v8.START, v8.END, v8.SOURCE = old_start, old_end, old_source
+        base.URL = old_url
 
 def identity(t):
     return (t["direction"], t["formation_time"], t["confirmation_time"])
