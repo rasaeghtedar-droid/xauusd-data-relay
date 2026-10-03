@@ -80,14 +80,14 @@ def main() -> None:
 
     baseline = next(r for r in rows if r["name"] == "OOS_BASELINE")
     baseline_guard = {
-        "expected_signals": 130,
+        "expected_signals": 131,
         "actual_signals": baseline["signals"],
         "matches_locked_baseline": baseline["signals"] == 130,
         "expected_status": "PASS",
     }
     if not baseline_guard["matches_locked_baseline"]:
         raise RuntimeError(
-            "OOS_BASELINE did not reproduce the locked 130-trade V8 result: "
+            "OOS_BASELINE did not reproduce the locked 131-trade V8 Cap4 result: "
             + json.dumps(baseline_guard)
         )
 
@@ -108,8 +108,8 @@ def main() -> None:
     payload = {
         "status": "COMPLETED",
         "research_only": True,
-        "engine": "FVG_EXECUTABLE_AUDIT_V8",
-        "method": "independent fixed-window replays using the exact locked V8 engine; no parameter tuning",
+        "engine": "FVG_EXECUTABLE_AUDIT_V8_CAP4",
+        "method": "independent fixed-window replays using the exact locked V8 Cap4 engine; no parameter tuning",
         "source": SOURCE,
         "baseline_guard": baseline_guard,
         "summary": summary,
@@ -118,7 +118,7 @@ def main() -> None:
             "Each window is intentionally replayed independently, matching the locked OOS baseline methodology.",
             "Windows are used for stability evidence, not to aggregate a single portfolio result.",
             "The OOS_BASELINE must reproduce the locked 130-trade result or this test fails.",
-            "No production or V8 rule is modified by this validation.",
+            "No production rule is modified by this validation; V8 target rule is locked to Structural capped at 4R.",
         ],
     }
 
