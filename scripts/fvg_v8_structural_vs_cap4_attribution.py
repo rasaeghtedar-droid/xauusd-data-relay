@@ -103,8 +103,15 @@ def analyze(structural, cap4):
         and r["cap4_exit_time"] < r["structural_exit_time"]
     ]
     common_delta = round(sum(r["delta_r"] for r in common_rows), 2)
+    target_effect_r = common_delta
+    target_positive_r = round(sum(r["delta_r"] for r in capped_common if r["delta_r"] > 0), 2)
+    target_negative_r = round(sum(r["delta_r"] for r in capped_common if r["delta_r"] < 0), 2)
+    target_zero_count = sum(r["delta_r"] == 0 for r in capped_common)
+    early_release_count = len(early_release)
     only_a_r = round(sum(realized(a[k]) for k in only_a), 2)
     only_b_r = round(sum(realized(b[k]) for k in only_b), 2)
+    gross_delta_r = round(cap4["overall"]["net_r"] - structural["overall"]["net_r"], 2)
+    decomposition_r = round(target_effect_r + only_b_r - only_a_r, 2)
 
     return {
         "structural_signals": len(a),
@@ -115,9 +122,16 @@ def analyze(structural, cap4):
         "common_target_capped": len(capped_common),
         "common_early_exit_count": len(early_release),
         "common_delta_r": common_delta,
+        "target_effect_r": target_effect_r,
+        "target_effect_positive_r": target_positive_r,
+        "target_effect_negative_r": target_negative_r,
+        "target_effect_zero_count": target_zero_count,
+        "early_release_count": early_release_count,
         "structural_only_realized_r": only_a_r,
         "cap4_only_realized_r": only_b_r,
-        "gross_net_delta_r": round(cap4["overall"]["net_r"] - structural["overall"]["net_r"], 2),
+        "gross_net_delta_r": gross_delta_r,
+        "decomposition_r": decomposition_r,
+        "decomposition_check": decomposition_r == gross_delta_r,
         "cap4_net_r": cap4["overall"]["net_r"],
         "structural_net_r": structural["overall"]["net_r"],
         "common_trade_details": common_rows,
