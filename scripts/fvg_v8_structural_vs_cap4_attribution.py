@@ -39,15 +39,16 @@ WINDOWS = [
 ]
 
 def run_model(start, end, cap4):
+    structural_target = base.target
     old_target = v8.target
     def capped(direction, entry, sl, ctx):
-        structural = old_target(direction, entry, sl, ctx)
+        structural = structural_target(direction, entry, sl, ctx)
         if structural is None or not cap4:
             return structural
         risk = entry - sl if direction == "BUY" else sl - entry
         cap_tp = entry + 4.0 * risk if direction == "BUY" else entry - 4.0 * risk
         return min(structural, cap_tp) if direction == "BUY" else max(structural, cap_tp)
-    v8.target = capped
+    v8.target = structural_target if not cap4 else capped
     old_start, old_end, old_source = v8.START, v8.END, v8.SOURCE
     old_url = base.URL
     v8.START, v8.END, v8.SOURCE = start, end, SOURCE
