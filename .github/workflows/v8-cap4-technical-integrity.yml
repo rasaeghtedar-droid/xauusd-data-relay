@@ -1,0 +1,90 @@
+name: V8 Cap4 Technical Integrity Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integrity:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout V8 experiment branch
+        uses: actions/checkout@v4
+        with:
+          ref: experiment-fvg-setups
+
+      - name: Python syntax check
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/fvg_v8_live_dry_run.py
+          python -m py_compile scripts/fvg_executable_audit_v8.py
+          python -m py_compile scripts/fvg_only_gold_hunter_backtest.py
+          echo "PY_COMPILE=PASS"
+
+      - name: Import V8 Cap4 engine
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from scripts import fvg_v8_live_dry_run as live
+          from scripts.fvg_executable_audit_v8 import target as cap4_target
+          from scripts.fvg_only_gold_hunter_backtest import fvg_at, agg, PAD, LOOKBACK
+
+          assert live.FRESHNESS_MINUTES == 30.0
+          assert live.M5_LIMIT == 1000
+          assert callable(cap4_target)
+          assert callable(fvg_at)
+          assert callable(agg)
+          assert PAD == 0.5
+          assert LOOKBACK == 30
+
+          print("ENGINE=FVG_EXECUTABLE_AUDIT_V8_CAP4")
+          print("FRESHNESS_RULE=<=30_MINUTES")
+          print("M5_LIMIT=1000")
+          print("PAD=0.5")
+          print("LOOKBACK=30")
+          print("IMPORT=PASS")
+          PY
+
+      - name: Verify no order execution path
+        run: |
+          set -euo pipefail
+          if grep -nE 'MetaTrader|order_send|send_order|mt5\.order|broker' scripts/fvg_v8_live_dry_run.py; then
+            echo "Unexpected order-execution reference found."
+            exit 1
+          fi
+          echo "ORDER_EXECUTION_PATH=ABSENT"
+
+      - name: Verify output contract
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          source = Path("scripts/fvg_v8_live_dry_run.py").read_text(encoding="utf-8")
+
+          required = [
+              'DATA_NOT_AVAILABLE',
+              'DATA_STALE',
+              'NO TRADE',
+              'SIGNAL',
+              'FVG_EXECUTABLE_AUDIT_V8_CAP4',
+              'latest_closed_m5',
+              'freshness_minutes',
+              'signal_key',
+              'entry',
+              'sl',
+              'tp',
+              'rr',
+          ]
+
+          missing = [x for x in required if x not in source]
+          if missing:
+              raise AssertionError(f"Missing output contract fields: {missing}")
+
+          print("OUTPUT_CONTRACT=PASS")
+          print(json.dumps({"required_tokens": len(required)}, indent=2))
+          PY
