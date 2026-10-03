@@ -17,10 +17,10 @@ def capped_target(direction, entry, sl, structural_tp, cap):
     cap_tp = entry + cap*risk if direction=="BUY" else entry - cap*risk
     return min(structural_tp,cap_tp) if direction=="BUY" else max(structural_tp,cap_tp)
 
-def outcome(m5, t, tp):
+def outcome(m5, t, sl, tp):
     for i in range(t["entry_index"]+1,len(m5)):
         b=m5[i]
-        sl_hit=b["low"]<=t["sl"] if t["direction"]=="BUY" else b["high"]>=t["sl"]
+        sl_hit=b["low"]<=sl if t["direction"]=="BUY" else b["high"]>=sl
         tp_hit=b["high"]>=tp if t["direction"]=="BUY" else b["low"]<=tp
         if sl_hit and tp_hit: return "AMBIGUOUS"
         if tp_hit: return "TP"
@@ -57,7 +57,7 @@ def main():
             e=t.get("_raw_entry",t["entry"]); s=t.get("_raw_sl",t["sl"]); q=t.get("_raw_tp",t["tp"])
             tp=capped_target(t["direction"],e,s,q,cap)
             risk=abs(e-s); rr=(tp-e)/risk if t["direction"]=="BUY" else (e-tp)/risk
-            out=outcome(m5,t,tp)
+            out=outcome(m5,t,s,tp)
             realized=rr if out=="TP" else (-1 if out=="SL" else 0)
             rows.append({"direction":t["direction"],"formation_time":t["formation_time"],"confirmation_time":t["confirmation_time"],"outcome":out,"rr":rr,"realized_r":realized})
         results.append({"model":name,"target_cap_r":cap,"summary":summarize(rows)})
