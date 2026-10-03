@@ -15,6 +15,13 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+import sys
+
+# Make sibling modules in scripts/ importable whether this file is run
+# directly (python scripts/...) or imported by a workflow test.
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
 
 from fvg_executable_audit_v8 import target as cap4_target
 from fvg_only_gold_hunter_backtest import PAD, LOOKBACK, agg, fvg_at, pt
