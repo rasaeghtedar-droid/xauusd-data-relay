@@ -62,6 +62,6 @@ def main():
             rows.append({"direction":t["direction"],"formation_time":t["formation_time"],"confirmation_time":t["confirmation_time"],"outcome":out,"rr":rr,"realized_r":realized})
         results.append({"model":name,"target_cap_r":cap,"summary":summarize(rows)})
     result={"status":"COMPLETED","research_only":True,"purpose":"Target-only efficiency comparison on exact locked V8 cohort; no entry/cohort changes.","locked_signals":len(trades),"models":results,
-            "invariants":{"all_models_same_cohort":all(identities==[(r["direction"],r["formation_time"],r["confirmation_time"]) for r in trades]),"all_models_same_signal_count":all(x["summary"]["signals"]==len(trades) for x in results),"no_rule_changes":True}}
+            "invariants":{"all_models_same_cohort":identities==[(r["direction"],r["formation_time"],r["confirmation_time"]) for r in trades],"all_models_same_signal_count":all(x["summary"]["signals"]==len(trades) for x in results),"no_rule_changes":True}}
     OUT.write_text(json.dumps(result,indent=2),encoding="utf-8"); print(json.dumps(result,indent=2))
 if __name__=="__main__": main()
