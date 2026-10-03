@@ -1,0 +1,27 @@
+name: V8 Cap4 Live Dry-Run Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout V8 experiment branch
+        uses: actions/checkout@v4
+        with:
+          ref: experiment-fvg-setups
+
+      - name: Run V8 Cap4 live dry-run
+        run: |
+          set -euo pipefail
+          python scripts/fvg_v8_live_dry_run.py
+
+      - name: Show live result
+        run: |
+          echo "===== V8 CAP4 LIVE DRY-RUN RESULT ====="
+          cat data/xauusd_v8_live.json
