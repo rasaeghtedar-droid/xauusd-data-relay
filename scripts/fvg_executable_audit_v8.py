@@ -5,7 +5,7 @@ Strict state-machine audit:
 - FVG -> midpoint return + directional confirmation on a closed M5 candle.
 - Entry is the FVG midpoint on the confirmation candle.
 - SL is FVG boundary +/- PAD.
-- TP is selected from M15 context strictly before FVG formation, using the actual entry.
+- TP is selected from M15 context strictly before FVG formation, using the actual entry, then capped at 4R.
 - RR is recomputed from the actual entry and must be >= 2.
 - One active trade; confirmations while active are missed.
 - No same-candle exit; exits start on the next closed M5 candle.
@@ -17,7 +17,18 @@ from pathlib import Path
 from datetime import timedelta
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parent))
-from fvg_only_gold_hunter_backtest import load,agg,fvg_at,target,pt,PAD,LOOKBACK
+from fvg_only_gold_hunter_backtest import load,agg,fvg_at,target as structural_target,pt,PAD,LOOKBACK
+
+CAP4_R = 4.0
+
+def target(d, entry, sl, ctx):
+    """Return the locked final target: min(structural target, 4R cap)."""
+    structural = structural_target(d, entry, sl, ctx)
+    if structural is None:
+        return None
+    risk = entry - sl if d == "BUY" else sl - entry
+    cap_tp = entry + CAP4_R * risk if d == "BUY" else entry - CAP4_R * risk
+    return min(structural, cap_tp) if d == "BUY" else max(structural, cap_tp)
 
 START=os.getenv("FVG_ONLY_START_UTC"); END=os.getenv("FVG_ONLY_END_UTC"); SOURCE=os.getenv("COMBINED_SOURCE_URL")
 
@@ -88,7 +99,7 @@ def main():
         elif active is None and confirmed:
             confirmed.sort(key=lambda x:(x["formed_index"],x["confirmation_index"]))
             s=confirmed[0]
-            active={"engine":"FVG_EXECUTABLE_AUDIT_V8","direction":s["direction"],
+            active={"engine":"FVG_EXECUTABLE_AUDIT_V8_CAP4","direction":s["direction"],
                     "formation_time":s["time"],"confirmation_time":s["confirmation_time"],
                     "entry":s["entry"],"sl":s["sl"],"tp":s["tp"],
                     "rr":round(s["rr"],2),"confirmation_index":i,"entry_index":i,"_raw_entry":s["_raw_entry"],"_raw_sl":s["_raw_sl"],"_raw_tp":s["_raw_tp"],
@@ -125,9 +136,9 @@ def main():
 
     tp_n=sum(x["outcome"]=="TP" for x in trades); sl_n=sum(x["outcome"]=="SL" for x in trades); amb=sum(x["outcome"]=="AMBIGUOUS" for x in trades); op=sum(x["outcome"]=="OPEN_AT_DATA_END" for x in trades)
     net=sum(x["rr"] if x["outcome"]=="TP" else -1 if x["outcome"]=="SL" else 0 for x in trades)
-    result={"status":"COMPLETED" if not errors else "FAILED_INVARIANTS","research_only":True,"source":SOURCE,
+    result={"status":"COMPLETED" if not errors else "FAILED_INVARIANTS","research_only":True,"engine":"FVG_EXECUTABLE_AUDIT_V8_CAP4","target_rule":"min(structural target, 4R)","source":SOURCE,
       "validation_start_utc":START,"validation_end_utc":END,
-      "rules":{"entry":"FVG midpoint on confirmation candle","confirmation_candle_can_fill":False,"exit_starts":"first closed candle strictly after entry","one_active_trade":True,"queue":False,"lookahead":False,"target_context":"M15 candles strictly before FVG formation"},
+      "rules":{"entry":"FVG midpoint on confirmation candle","confirmation_candle_can_fill":False,"exit_starts":"first closed candle strictly after entry","one_active_trade":True,"queue":False,"lookahead":False,"target_context":"M15 candles strictly before FVG formation","target_cap":"min(structural target, 4R)"},
       "data":{"m5":len(m5),"m15":len(m15),"first_m5":m5[0]["openTime"],"last_m5":m5[-1]["openTime"]},
       "overall":{"signals":len(trades),"tp":tp_n,"sl":sl_n,"ambiguous":amb,"open_at_data_end":op,"win_rate":round(100*tp_n/(tp_n+sl_n),2) if tp_n+sl_n else None,"net_r":round(net,2),"conservative_net_r":round(net-amb,2),"avg_rr":round(sum(x["rr"] for x in trades)/len(trades),2) if trades else None},
       "lifecycle":{"confirmations":confirmations,"missed_or_competing_opportunities":missed,"invalidated_pending_fvgs":invalidated,"remaining_pending_fvgs":len(pending)},
