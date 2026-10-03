@@ -240,8 +240,29 @@ def main() -> None:
         }
     else:
         signal, reason, meta = run_v8(m5)
+
+        # Prevent the same confirmation candle from being emitted repeatedly
+        # by the 10-minute relay. A later run may still see the same latest M5
+        # candle, but only the first observation is an actionable SIGNAL.
+        previous = None
+        if LIVE_PATH.exists():
+            try:
+                previous = json.loads(LIVE_PATH.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                previous = None
+
+        signal_key = None
+        if signal:
+            signal_key = f'{signal["direction"]}|{signal["confirmation_time"]}'
+        previous_key = (previous or {}).get("signal_key")
+
+        is_new_signal = bool(signal and signal_key != previous_key)
+        if signal and not is_new_signal:
+            reason = "same V8 confirmation already emitted; waiting for a new closed M5 candle"
+            signal = None
+
         payload = {
-            "status": "SIGNAL" if signal else "NO TRADE",
+            "status": "SIGNAL" if is_new_signal else "NO TRADE",
             "engine": "FVG_EXECUTABLE_AUDIT_V8_CAP4",
             "source": "Biquote",
             "fetched_at_utc": fetched_at,
@@ -249,6 +270,7 @@ def main() -> None:
             "freshness_minutes": round(age, 2),
             "reason": reason,
             "data": meta,
+            "signal_key": signal_key,
             "signal": signal,
         }
 
