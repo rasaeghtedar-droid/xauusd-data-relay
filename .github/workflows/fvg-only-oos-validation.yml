@@ -221,6 +221,14 @@ jobs:
         run: |
           set -o pipefail
           python scripts/fvg_executable_audit_v8.py | tee /tmp/fvg_executable_audit_v8_output.txt
+      - name: Run V8 Structural vs Cap4 attribution
+        run: |
+          python scripts/fvg_v8_structural_vs_cap4_diagnostic.py | tee /tmp/fvg_v8_structural_vs_cap4_output.txt
+
+      - name: Print V8 Structural vs Cap4 attribution
+        run: |
+          cat backtest/fvg_v8_structural_vs_cap4_attribution.json
+
       - name: Run V8 Cap4 stability replay
         run: |
           python scripts/fvg_v8_cap4_stability.py | tee /tmp/fvg_v8_cap4_stability_output.txt
