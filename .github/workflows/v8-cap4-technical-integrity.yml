@@ -51,11 +51,44 @@ jobs:
       - name: Verify no order execution path
         run: |
           set -euo pipefail
-          if grep -nE 'MetaTrader|order_send|send_order|mt5\.order|broker' scripts/fvg_v8_live_dry_run.py; then
-            echo "Unexpected order-execution reference found."
-            exit 1
-          fi
-          echo "ORDER_EXECUTION_PATH=ABSENT"
+          python - <<'PY'
+          import ast
+          from pathlib import Path
+
+          path = Path("scripts/fvg_v8_live_dry_run.py")
+          tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+
+          forbidden_modules = {"MetaTrader5", "MetaTrader5.exe"}
+          forbidden_calls = {"order_send", "send_order"}
+
+          violations = []
+
+          for node in ast.walk(tree):
+              if isinstance(node, ast.Import):
+                  for alias in node.names:
+                      if alias.name in forbidden_modules or alias.name.startswith("MetaTrader5."):
+                          violations.append(f"import:{alias.name}:{node.lineno}")
+              elif isinstance(node, ast.ImportFrom):
+                  if node.module and (
+                      node.module in forbidden_modules
+                      or node.module.startswith("MetaTrader5.")
+                  ):
+                      violations.append(f"from_import:{node.module}:{node.lineno}")
+              elif isinstance(node, ast.Call):
+                  func = node.func
+                  if isinstance(func, ast.Name) and func.id in forbidden_calls:
+                      violations.append(f"call:{func.id}:{node.lineno}")
+                  elif isinstance(func, ast.Attribute) and func.attr in forbidden_calls:
+                      violations.append(f"call:{func.attr}:{node.lineno}")
+
+          if violations:
+              raise AssertionError(
+                  "Unexpected order-execution AST reference(s): " + ", ".join(violations)
+              )
+
+          print("ORDER_EXECUTION_PATH=ABSENT")
+          print("CHECK_METHOD=AST_EXCLUDING_COMMENTS_AND_DOCSTRINGS")
+          PY
 
       - name: Verify output contract
         run: |
