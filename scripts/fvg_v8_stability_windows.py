@@ -84,7 +84,8 @@ def main() -> None:
         "actual_signals": baseline["signals"],
         "matches_locked_baseline": baseline["signals"] == 131,
         "expected_status": "PASS",
-    
+    }
+
     if not baseline_guard["matches_locked_baseline"]:
         raise RuntimeError(
             "OOS_BASELINE did not reproduce the locked 131-trade V8 Cap4 result: "
