@@ -232,6 +232,28 @@ jobs:
           echo "===== FVG V8 STABILITY WINDOWS JSON ====="
           cat backtest/fvg_v8_stability_windows_results.json
           echo "===== END FVG V8 STABILITY WINDOWS ====="
+      - name: Run V8 frozen target efficiency diagnostics
+        env:
+          FVG_ONLY_START_UTC: "2026-08-01T00:00:00+00:00"
+          FVG_ONLY_END_UTC: "2026-09-09T23:59:59+00:00"
+          COMBINED_SOURCE_URL: "https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv"
+        run: |
+          set -o pipefail
+          python scripts/fvg_v8_target_efficiency.py | tee /tmp/fvg_v8_target_efficiency_output.txt
+      - name: Print V8 frozen target efficiency summary
+        run: |
+          python - <<'PY'
+          import json
+          d=json.load(open("backtest/fvg_v8_target_efficiency.json",encoding="utf-8"))
+          print("===== V8 FROZEN TARGET EFFICIENCY SUMMARY =====")
+          print("STATUS:",d["status"])
+          print("LOCKED SIGNALS:",d["locked_signals"])
+          print("INVARIANTS:",d["invariants"])
+          for m in d["models"]:
+              print(m["model"], "|", m["summary"])
+          print("===== END V8 FROZEN TARGET EFFICIENCY SUMMARY =====")
+          PY
+
       - name: Run V8 target versus MFE diagnostics
         env:
           FVG_ONLY_START_UTC: "2026-08-01T00:00:00+00:00"
