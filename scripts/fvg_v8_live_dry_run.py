@@ -69,7 +69,7 @@ def freshness_minutes(open_time: str) -> float:
     return (now - pt(open_time)).total_seconds() / 60.0
 
 
-def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict]:
+def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
     m15 = agg(m5, 15)
     m15_times = [pt(x["openTime"]) for x in m15]
 
@@ -81,6 +81,7 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict]:
     latest_time = m5[-1]["openTime"]
     latest_reason = "no new signal on latest closed M5 candle"
     latest_signal = None
+    latest_result = None
 
     # Preserve the locked V8 sequencing exactly: resolve active, invalidate,
     # confirm, then detect the newly formed FVG on the current candle.
@@ -91,7 +92,35 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict]:
         if active is not None:
             sl_hit = (c["low"] <= active["sl"]) if active["direction"] == "BUY" else (c["high"] >= active["sl"])
             tp_hit = (c["high"] >= active["tp"]) if active["direction"] == "BUY" else (c["low"] <= active["tp"])
+
             if sl_hit or tp_hit:
+                if c["openTime"] == latest_time:
+                    if sl_hit and tp_hit:
+                        outcome = "AMBIGUOUS"
+                        result_icon = "⚠️"
+                        result_r = 0.0
+                    elif tp_hit:
+                        outcome = "TP"
+                        result_icon = "✅"
+                        result_r = active["rr"]
+                    else:
+                        outcome = "SL"
+                        result_icon = "❌"
+                        result_r = -1.0
+
+                    latest_result = {
+                        "status": outcome,
+                        "icon": result_icon,
+                        "signal_key": f'{active["direction"]}|{active["confirmation_time"]}',
+                        "direction": active["direction"],
+                        "entry": active["entry"],
+                        "sl": active["sl"],
+                        "tp": active["tp"],
+                        "rr": active["rr"],
+                        "result_r": round(result_r, 2),
+                        "exit_time": c["openTime"],
+                    }
+
                 active = None
 
         confirmed = []
@@ -198,7 +227,7 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict]:
         "first_m5": m5[0]["openTime"],
         "last_m5": m5[-1]["openTime"],
         "pending_at_end": len(pending),
-    }
+    }, latest_result
 
 
 def merge_into_analysis(payload: dict) -> None:
@@ -246,7 +275,7 @@ def main() -> None:
             "reason": "latest closed M5 candle is stale",
         }
     else:
-        signal, reason, meta = run_v8(m5)
+        signal, reason, meta, result = run_v8(m5)
 
         # Prevent the same confirmation candle from being emitted repeatedly
         # by the 10-minute relay. A later run may still see the same latest M5
@@ -279,6 +308,7 @@ def main() -> None:
             "data": meta,
             "signal_key": signal_key,
             "signal": signal,
+            "result": result,
         }
 
     LIVE_PATH.parent.mkdir(parents=True, exist_ok=True)
