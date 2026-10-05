@@ -31,59 +31,7 @@ jobs:
         run: |
           set -euo pipefail
           python scripts/fvg_v8_live_dry_run.py
-      - name: Prepare Telegram signal notification
-        run: |
-          set -euo pipefail
 
-          python - <<'PY'
-          import json
-
-          path = "data/xauusd_v8_live.json"
-
-          with open(path, encoding="utf-8") as f:
-              data = json.load(f)
-
-          signal = data.get("signal")
-          latest = data.get("latest_closed_m5")
-
-          # فقط سیگنال جدید روی آخرین کندل بسته‌شده ارسال شود.
-          # سیگنال فعال قبلی دوباره تلگرام نشود.
-          if data.get("status") != "SIGNAL" or not signal:
-              raise SystemExit(0)
-
-          if signal.get("confirmation_time") != latest:
-              raise SystemExit(0)
-
-          direction = signal.get("direction", "?")
-          entry = signal.get("entry", "?")
-          sl = signal.get("sl", "?")
-          tp = signal.get("tp", "?")
-          rr = signal.get("rr", "?")
-
-          message = f"""🚨 XAUUSD V8 CAP4 SIGNAL
-
-Direction: {direction}
-Entry: {entry}
-SL: {sl}
-TP: {tp}
-R:R: {rr}
-
-M5 confirmation: {latest}
-Source: Biquote
-Execution: DISABLED (Signal-Only)
-"""
-
-          with open("telegram_message.txt", "w", encoding="utf-8") as f:
-              f.write(message)
-          PY
-
-      - name: Send Telegram signal
-        uses: appleboy/telegram-action@v1.1.1
-        with:
-          to: ${{ secrets.TELEGRAM_CHAT_ID }}
-          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          message_file: telegram_message.txt
-          disable_web_page_preview: true
       - name: Prepare dashboard site
         run: |
           set -euo pipefail
