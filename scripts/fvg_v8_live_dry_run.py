@@ -73,7 +73,31 @@ def timeframe_snapshot(m5: list[dict]) -> dict:
     def snap(bars: list[dict]) -> dict:
         if not bars:
             return {"status": "DATA_NOT_AVAILABLE"}
+
         c = bars[-1]
+        highs = []
+        lows = []
+        # Confirmed 2-left / 2-right swings. This is display-only and does
+        # not participate in V8 entry decisions.
+        for i in range(2, len(bars) - 2):
+            h = bars[i]["high"]
+            l = bars[i]["low"]
+            if h > max(bars[i-2]["high"], bars[i-1]["high"], bars[i+1]["high"], bars[i+2]["high"]):
+                highs.append(h)
+            if l < min(bars[i-2]["low"], bars[i-1]["low"], bars[i+1]["low"], bars[i+2]["low"]):
+                lows.append(l)
+
+        structure = "NEUTRAL"
+        if len(highs) >= 2 and len(lows) >= 2:
+            hh = highs[-1] > highs[-2]
+            hl = lows[-1] > lows[-2]
+            lh = highs[-1] < highs[-2]
+            ll = lows[-1] < lows[-2]
+            if hh and hl:
+                structure = "BULLISH"
+            elif lh and ll:
+                structure = "BEARISH"
+
         return {
             "openTime": c["openTime"],
             "open": c["open"],
@@ -81,6 +105,8 @@ def timeframe_snapshot(m5: list[dict]) -> dict:
             "low": c["low"],
             "close": c["close"],
             "direction": "BULLISH" if c["close"] >= c["open"] else "BEARISH",
+            "structure": structure,
+            "bias": structure,
         }
 
     return {
