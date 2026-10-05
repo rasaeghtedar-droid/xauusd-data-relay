@@ -29,6 +29,7 @@ from fvg_only_gold_hunter_backtest import PAD, LOOKBACK, agg, fvg_at, pt
 ROOT = Path(__file__).resolve().parents[1]
 ANALYSIS_PATH = ROOT / "data" / "xauusd_analysis.json"
 LIVE_PATH = ROOT / "data" / "xauusd_v8_live.json"
+HISTORY_PATH = ROOT / "data" / "xauusd_v8_history.json"
 
 BASE_URL = "https://biquote.io/api/XAUUSD/ohlc"
 M5_LIMIT = 1000
@@ -129,6 +130,8 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
     latest_reason = "no new signal on latest closed M5 candle"
     latest_signal = None
     latest_result = None
+    trade_history = []
+    active_history = None
 
     # Preserve the locked V8 sequencing exactly: resolve active, invalidate,
     # confirm, then detect the newly formed FVG on the current candle.
@@ -171,7 +174,14 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
                     "exit_time": c["openTime"],
                 }
 
+                if active_history is not None:
+                    active_history.update(latest_result)
+                    trade_history.append(dict(active_history))
+                else:
+                    trade_history.append(dict(latest_result))
+
                 active = None
+                active_history = None
 
         confirmed = []
 
@@ -234,6 +244,19 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
                     latest_reason = "valid V8 confirmation was missed because one active trade already existed"
                 else:
                     active = candidate
+                    active_history = {
+                        "signal_key": f'{candidate["direction"]}|{candidate["confirmation_time"]}',
+                        "direction": candidate["direction"],
+                        "confirmation_time": candidate["confirmation_time"],
+                        "formation_time": candidate["time"],
+                        "entry": candidate["entry"],
+                        "sl": candidate["sl"],
+                        "tp": candidate["tp"],
+                        "rr": candidate["rr"],
+                        "status": "PENDING",
+                        "result_r": None,
+                        "exit_time": None,
+                    }
                     latest_signal = {
                         "engine": "FVG_EXECUTABLE_AUDIT_V8_CAP4",
                         "direction": candidate["direction"],
@@ -252,6 +275,19 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
             if active is None and confirmed:
                 confirmed.sort(key=lambda x: x["formed_index"])
                 active = confirmed[0]
+                active_history = {
+                    "signal_key": f'{active["direction"]}|{active["confirmation_time"]}',
+                    "direction": active["direction"],
+                    "confirmation_time": active["confirmation_time"],
+                    "formation_time": active["time"],
+                    "entry": active["entry"],
+                    "sl": active["sl"],
+                    "tp": active["tp"],
+                    "rr": active["rr"],
+                    "status": "PENDING",
+                    "result_r": None,
+                    "exit_time": None,
+                }
 
         f = fvg_at(m5, i)
         if f:
@@ -286,6 +322,8 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
             "status": "ACTIVE",
         }
         latest_reason = "active V8 trade reconstructed from closed M5 replay"
+        if active_history is not None:
+            trade_history.append(dict(active_history))
 
     return latest_signal, latest_reason, {
         "m5_closed": len(m5),
@@ -293,7 +331,7 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
         "first_m5": m5[0]["openTime"],
         "last_m5": m5[-1]["openTime"],
         "pending_at_end": len(pending),
-    }, latest_result
+    }, latest_result, trade_history
 
 
 def merge_into_analysis(payload: dict) -> None:
@@ -341,7 +379,51 @@ def main() -> None:
             "reason": "latest closed M5 candle is stale",
         }
     else:
-        signal, reason, meta, result = run_v8(m5)
+        signal, reason, meta, result, replay_history = run_v8(m5)
+
+        existing_history = []
+        if HISTORY_PATH.exists():
+            try:
+                existing_history = json.loads(HISTORY_PATH.read_text(encoding="utf-8"))
+                if not isinstance(existing_history, list):
+                    existing_history = []
+            except (OSError, json.JSONDecodeError):
+                existing_history = []
+
+        history_by_key = {
+            str(item.get("signal_key")): dict(item)
+            for item in existing_history
+            if item.get("signal_key")
+        }
+        for item in replay_history:
+            key = item.get("signal_key")
+            if not key:
+                continue
+            current = history_by_key.get(key, {})
+            current.update(item)
+            history_by_key[key] = current
+
+        history = sorted(
+            history_by_key.values(),
+            key=lambda x: str(x.get("confirmation_time", "")),
+            reverse=True,
+        )
+
+        stats = {
+            "total": len(history),
+            "tp": sum(1 for x in history if x.get("status") == "TP"),
+            "sl": sum(1 for x in history if x.get("status") == "SL"),
+            "ambiguous": sum(1 for x in history if x.get("status") == "AMBIGUOUS"),
+            "pending": sum(1 for x in history if x.get("status") in ("PENDING", "ACTIVE")),
+        }
+        stats["resolved"] = stats["tp"] + stats["sl"] + stats["ambiguous"]
+        stats["win_rate_percent"] = round((stats["tp"] / stats["resolved"]) * 100, 2) if stats["resolved"] else None
+
+        HISTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
+        HISTORY_PATH.write_text(
+            json.dumps(history, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
 
         # Prevent the same confirmation candle from being emitted repeatedly
         # by the 10-minute relay. A later run may still see the same latest M5
@@ -389,6 +471,8 @@ def main() -> None:
             "signal_key": signal_key,
             "signal": signal,
             "result": result,
+            "history": history,
+            "history_stats": stats,
         }
 
     LIVE_PATH.parent.mkdir(parents=True, exist_ok=True)
