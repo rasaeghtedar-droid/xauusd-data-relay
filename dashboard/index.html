@@ -66,9 +66,10 @@
     </div>
 
     <div class="history">
-      <h2>آخرین سیگنال / نتیجه</h2>
+      <h2>تمام سیگنال‌ها / نتایج</h2>
+      <div id="historyStats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:10px"></div>
       <div class="row head"><div>زمان</div><div>نوع</div><div>ورود</div><div>RR</div><div>نتیجه</div></div>
-      <div id="historyRows"><div class="row"><div colspan="5">در انتظار داده زنده...</div></div></div>
+      <div id="historyRows"><div class="row"><div>—</div><div>—</div><div>—</div><div>—</div><div class="pending">در انتظار داده</div></div></div>
       <div style="margin-top:14px" class="label">نتیجه هر معامله بعد از برخورد TP/SL ثبت می‌شود.</div>
     </div>
   </section>
@@ -155,8 +156,20 @@ async function load(){
     $('h1').textContent=tfText('H1');
     $('m15').textContent=tfText('M15');
     $('m5').textContent=tfText('M5');
-    const result=live.result;
-    $('historyRows').innerHTML=result?'<div class="row"><div>'+esc(result.exit_time)+'</div><div class="tag '+(result.direction==='BUY'?'buy':'sell')+'">'+esc(result.direction)+'</div><div>'+fmt(result.entry)+'</div><div>'+esc(result.rr)+'</div><div class="result '+(result.status==='TP'?'ok':result.status==='SL'?'bad':'pending')+'">'+esc(result.icon)+' '+esc(result.status)+'</div></div>':'<div class="row"><div>—</div><div>—</div><div>—</div><div>—</div><div class="pending">در انتظار نتیجه</div></div>';
+    const history=Array.isArray(live.history)?live.history:[];
+    const hs=live.history_stats||{};
+    $('historyStats').innerHTML=[
+      ['کل سیگنال',hs.total??history.length,''],
+      ['TP',hs.tp??0,'ok'],
+      ['SL',hs.sl??0,'bad'],
+      ['Win Rate',hs.win_rate_percent!=null?hs.win_rate_percent+'%':'—','']
+    ].map(x=>'<div class="mini"><span class="label">'+x[0]+'</span><b class="'+x[2]+'">'+x[1]+'</b></div>').join('');
+    $('historyRows').innerHTML=history.length?history.map(x=>{
+      const status=x.status||'PENDING';
+      const icon=status==='TP'?'✅':status==='SL'?'❌':status==='AMBIGUOUS'?'⚠️':'⏳';
+      const time=x.confirmation_time||x.exit_time||'—';
+      return '<div class="row"><div>'+esc(time)+'</div><div class="tag '+(x.direction==='BUY'?'buy':'sell')+'">'+esc(x.direction)+'</div><div>'+fmt(x.entry)+'</div><div>'+esc(x.rr??'—')+'</div><div class="result '+(status==='TP'?'ok':status==='SL'?'bad':'pending')+'">'+icon+' '+esc(status)+'</div></div>';
+    }).join(''):'<div class="row"><div>—</div><div>—</div><div>—</div><div>—</div><div class="pending">هنوز سیگنالی ثبت نشده</div></div>';
     // The visual chart is now the live TradingView PEPPERSTONE:XAUUSD M5 feed.
     // Keep Biquote candles for V8 engine/data diagnostics until the analysis source
     // is migrated separately; do not mix the two feeds inside the chart.
