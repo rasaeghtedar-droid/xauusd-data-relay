@@ -114,6 +114,17 @@ async function load(){
     $('direction').textContent=s?.direction||'NO TRADE'; $('direction').className='direction '+(s?.direction==='SELL'?'sell':s?.direction==='BUY'?'':'none');
     $('entry').textContent=fmt(s?.entry); $('sl').textContent=fmt(s?.sl); $('tp').textContent=fmt(s?.tp); $('rr').textContent=s?.rr!=null?'1 : '+s.rr:'—';
     $('confidence').textContent=s?'HIGH':'—'; $('score').textContent=s?'—':'—';
+
+    const tf=live.timeframes||{};
+    const tfText=(key)=>{
+      const x=tf[key];
+      if(!x || x.status==='DATA_NOT_AVAILABLE') return '—';
+      const dir=x.direction==='BULLISH'?'BULLISH':x.direction==='BEARISH'?'BEARISH':'—';
+      return dir+' · '+fmt(x.close);
+    };
+    $('h1').textContent=tfText('H1');
+    $('m15').textContent=tfText('M15');
+    $('m5').textContent=tfText('M5');
     const result=live.result;
     $('historyRows').innerHTML=result?'<div class="row"><div>'+esc(result.exit_time)+'</div><div class="tag '+(result.direction==='BUY'?'buy':'sell')+'">'+esc(result.direction)+'</div><div>'+fmt(result.entry)+'</div><div>'+esc(result.rr)+'</div><div class="result '+(result.status==='TP'?'ok':result.status==='SL'?'bad':'pending')+'">'+esc(result.icon)+' '+esc(result.status)+'</div></div>':'<div class="row"><div>—</div><div>—</div><div>—</div><div>—</div><div class="pending">در انتظار نتیجه</div></div>';
     const bars=d.intervals?.['5m']?.bars||[]; renderBars(bars); setLine('tpLine',s?.tp,bars); setLine('entryLine',s?.entry,bars); setLine('slLine',s?.sl,bars);
