@@ -20,10 +20,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout experiment branch
+      - name: Checkout V8 experiment branch
         uses: actions/checkout@v4
         with:
           ref: experiment-fvg-setups
+
+      - name: Run V8 Cap4 live dry-run
+        run: |
+          set -euo pipefail
+          python scripts/fvg_v8_live_dry_run.py
 
       - name: Prepare dashboard site
         run: |
