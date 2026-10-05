@@ -46,7 +46,15 @@
       </div>
       <div class="chart">
         <div class="chart-head"><strong>XAUUSD · M5</strong><span id="fresh" class="label">Freshness: —</span></div>
-        <div class="chartbox"><div id="bars" class="bars"></div><div id="tpLine" class="line tp"><span>TP</span></div><div id="entryLine" class="line entry"><span>Entry</span></div><div id="slLine" class="line sl"><span>SL</span></div></div>
+        <div class="chartbox" style="height:430px;padding:0">
+          <iframe
+            title="TradingView PEPPERSTONE XAUUSD M5"
+            src="https://www.tradingview.com/widgetembed/?symbol=PEPPERSTONE%3AXAUUSD&interval=5&hidesidetoolbar=1&symboledit=0&saveimage=0&toolbarbg=%2306111b&studies=%5B%5D&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&hideideas=1&locale=en"
+            style="width:100%;height:100%;border:0;border-radius:12px"
+            loading="lazy"
+            allowfullscreen>
+          </iframe>
+        </div>
       </div>
     </div>
 
@@ -127,7 +135,10 @@ async function load(){
     $('m5').textContent=tfText('M5');
     const result=live.result;
     $('historyRows').innerHTML=result?'<div class="row"><div>'+esc(result.exit_time)+'</div><div class="tag '+(result.direction==='BUY'?'buy':'sell')+'">'+esc(result.direction)+'</div><div>'+fmt(result.entry)+'</div><div>'+esc(result.rr)+'</div><div class="result '+(result.status==='TP'?'ok':result.status==='SL'?'bad':'pending')+'">'+esc(result.icon)+' '+esc(result.status)+'</div></div>':'<div class="row"><div>—</div><div>—</div><div>—</div><div>—</div><div class="pending">در انتظار نتیجه</div></div>';
-    const bars=d.intervals?.['5m']?.bars||[]; renderBars(bars); setLine('tpLine',s?.tp,bars); setLine('entryLine',s?.entry,bars); setLine('slLine',s?.sl,bars);
+    // The visual chart is now the live TradingView PEPPERSTONE:XAUUSD M5 feed.
+    // Keep Biquote candles for V8 engine/data diagnostics until the analysis source
+    // is migrated separately; do not mix the two feeds inside the chart.
+    const bars=d.intervals?.['5m']?.bars||[];
   }catch(e){$('status').textContent='DATA ERROR';$('market').textContent='DATA ERROR';$('market').className='value bad'}
 }
 load(); setInterval(load,60000);
