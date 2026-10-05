@@ -16,6 +16,7 @@ import urllib.request
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 import sys
+import time
 
 # Make sibling modules in scripts/ importable whether this file is run
 # directly (python scripts/...) or imported by a workflow test.
@@ -36,8 +37,10 @@ M5_LIMIT = 1000
 FRESHNESS_MINUTES = 30.0
 
 
-def fetch_closed_m5(limit: int = M5_LIMIT) -> list[dict]:
+def fetch_closed_m5(limit: int = M5_LIMIT) -> tuple[list[dict], dict]:
     query = urllib.parse.urlencode({"interval": "5m", "limit": limit})
+    request_started = datetime.now(timezone.utc)
+    started_perf = time.perf_counter()
     req = urllib.request.Request(
         f"{BASE_URL}?{query}",
         headers={"User-Agent": "XAUUSD-V8-Cap4-Live-DryRun/1.0", "Accept": "application/json"},
@@ -47,6 +50,8 @@ def fetch_closed_m5(limit: int = M5_LIMIT) -> list[dict]:
             raise RuntimeError(f"HTTP {response.status} from Biquote")
         payload = json.load(response)
 
+    response_received = datetime.now(timezone.utc)
+    api_latency_seconds = round(time.perf_counter() - started_perf, 3)
     bars = [b for b in payload.get("bars", []) if b.get("isOpen") is False]
     bars = [
         {
@@ -62,7 +67,15 @@ def fetch_closed_m5(limit: int = M5_LIMIT) -> list[dict]:
     bars.sort(key=lambda x: x["openTime"])
     if len(bars) < 100:
         raise RuntimeError(f"Too few closed M5 bars from Biquote: {len(bars)}")
-    return bars[-limit:]
+    diagnostics = {
+        "request_started_utc": request_started.isoformat().replace("+00:00", "Z"),
+        "response_received_utc": response_received.isoformat().replace("+00:00", "Z"),
+        "api_latency_seconds": api_latency_seconds,
+        "api_bar_count": len(payload.get("bars", [])),
+        "closed_bar_count": len(bars),
+        "latest_closed_open_time": bars[-1]["openTime"],
+    }
+    return bars[-limit:], diagnostics
 
 
 def freshness_minutes(open_time: str) -> float:
@@ -351,7 +364,7 @@ def main() -> None:
     fetched_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
     try:
-        m5 = fetch_closed_m5()
+        m5, api_diagnostics = fetch_closed_m5()
     except Exception as exc:
         payload = {
             "status": "DATA_NOT_AVAILABLE",
@@ -359,6 +372,7 @@ def main() -> None:
             "source": "Biquote",
             "fetched_at_utc": fetched_at,
             "reason": str(exc),
+            "api_diagnostics": {"request_started_utc": fetched_at},
         }
         LIVE_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         merge_into_analysis(payload)
@@ -377,6 +391,7 @@ def main() -> None:
             "freshness_minutes": round(age, 2),
             "freshness_rule": "<= 30 minutes",
             "reason": "latest closed M5 candle is stale",
+            "api_diagnostics": api_diagnostics,
         }
     else:
         signal, reason, meta, result, replay_history = run_v8(m5)
@@ -466,6 +481,7 @@ def main() -> None:
             "latest_closed_m5": latest,
             "freshness_minutes": round(age, 2),
             "reason": reason,
+            "api_diagnostics": api_diagnostics,
             "data": meta,
             "timeframes": timeframe_snapshot(m5),
             "signal_key": signal_key,
