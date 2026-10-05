@@ -247,7 +247,7 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
         latest_signal = {
             "engine": "FVG_EXECUTABLE_AUDIT_V8_CAP4",
             "direction": active["direction"],
-            "formation_time": active["formation_time"],
+            "formation_time": active.get("formation_time", active.get("time")),
             "confirmation_time": active["confirmation_time"],
             "entry": active["entry"],
             "sl": active["sl"],
