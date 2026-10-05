@@ -419,13 +419,38 @@ def main() -> None:
             for item in existing_history
             if item.get("signal_key")
         }
+        # IMPORTANT: replay_history is only allowed to UPDATE a trade
+        # that was already recorded as a live signal. It must never CREATE a
+        # brand-new history record. Otherwise a later rolling replay can make
+        # an old signal appear on the dashboard hours after it actually formed.
         for item in replay_history:
             key = item.get("signal_key")
-            if not key:
+            if not key or key not in history_by_key:
                 continue
-            current = history_by_key.get(key, {})
+            current = history_by_key[key]
             current.update(item)
             history_by_key[key] = current
+
+        # Only the signal confirmed on the CURRENT latest closed M5 candle is
+        # allowed to create a new history record. A reconstructed ACTIVE trade
+        # from an older candle must already exist in history to be updated.
+        live_signal_key = None
+        if signal and signal.get("confirmation_time") == latest:
+            live_signal_key = f'{signal["direction"]}|{signal["confirmation_time"]}'
+            if live_signal_key not in history_by_key:
+                history_by_key[live_signal_key] = {
+                    "signal_key": live_signal_key,
+                    "direction": signal["direction"],
+                    "confirmation_time": signal["confirmation_time"],
+                    "formation_time": signal.get("formation_time"),
+                    "entry": signal["entry"],
+                    "sl": signal["sl"],
+                    "tp": signal["tp"],
+                    "rr": signal["rr"],
+                    "status": "PENDING",
+                    "result_r": None,
+                    "exit_time": None,
+                }
 
         history = sorted(
             history_by_key.values(),
@@ -449,9 +474,9 @@ def main() -> None:
             encoding="utf-8",
         )
 
-        # Prevent the same confirmation candle from being emitted repeatedly
-        # by the 10-minute relay. A later run may still see the same latest M5
-        # candle, but only the first observation is an actionable SIGNAL.
+        # Prevent the same confirmation candle from being emitted repeatedly.
+        # A later run may still reconstruct the same trade from replay, but only
+        # the first observation of the CURRENT latest M5 candle is actionable.
         previous = None
         if LIVE_PATH.exists():
             try:
@@ -464,13 +489,17 @@ def main() -> None:
             signal_key = f'{signal["direction"]}|{signal["confirmation_time"]}'
         previous_key = (previous or {}).get("signal_key")
 
-        is_new_signal = bool(signal and signal_key != previous_key)
+        is_new_signal = bool(
+            signal
+            and signal.get("confirmation_time") == latest
+            and signal_key != previous_key
+        )
         if signal and not is_new_signal:
             reason = "same V8 confirmation already emitted; keeping the active signal"
             signal = None
 
         # Keep the last actionable signal visible until that trade resolves at TP/SL.
-        # A later NO TRADE candle must not erase an already-active signal.
+        # An older replay reconstruction must NOT be presented as a fresh signal.
         retained_signal = None
         if not signal and previous:
             prev_signal = previous.get("signal")
