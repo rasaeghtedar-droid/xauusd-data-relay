@@ -2,6 +2,8 @@ name: V8 Cap4 Dashboard
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "*/10 * * * *"
 
 permissions:
   contents: read
