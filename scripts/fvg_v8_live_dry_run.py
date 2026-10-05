@@ -315,11 +315,24 @@ def main() -> None:
 
         is_new_signal = bool(signal and signal_key != previous_key)
         if signal and not is_new_signal:
-            reason = "same V8 confirmation already emitted; waiting for a new closed M5 candle"
+            reason = "same V8 confirmation already emitted; keeping the active signal"
             signal = None
 
+        # Keep the last actionable signal visible until that trade resolves at TP/SL.
+        # A later NO TRADE candle must not erase an already-active signal.
+        retained_signal = None
+        if not signal and previous:
+            prev_signal = previous.get("signal")
+            prev_result = previous.get("result")
+            prev_status = previous.get("status")
+            if prev_status == "SIGNAL" and prev_signal and not prev_result:
+                retained_signal = prev_signal
+                signal = retained_signal
+                signal_key = previous.get("signal_key")
+                reason = "active V8 signal retained; waiting for TP/SL or a new setup"
+
         payload = {
-            "status": "SIGNAL" if is_new_signal else "NO TRADE",
+            "status": "SIGNAL" if (is_new_signal or retained_signal) else "NO TRADE",
             "engine": "FVG_EXECUTABLE_AUDIT_V8_CAP4",
             "source": "Biquote",
             "fetched_at_utc": fetched_at,
