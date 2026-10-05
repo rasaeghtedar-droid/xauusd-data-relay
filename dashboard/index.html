@@ -72,11 +72,30 @@ function fmt(v){return v==null?'—':Number(v).toFixed(3)}
 function esc(v){return String(v??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
 function renderBars(bars){
   const box=$('bars'); box.innerHTML='';
-  if(!bars?.length)return;
-  const sample=bars.slice(-70), hi=Math.max(...sample.map(x=>x.high)), lo=Math.min(...sample.map(x=>x.low)), span=hi-lo||1;
+  if(!Array.isArray(bars)||!bars.length){
+    box.innerHTML='<div style="width:100%;display:flex;align-items:center;justify-content:center;color:#8da5b7;font-size:13px">داده کندلی M5 موجود نیست</div>';
+    return;
+  }
+  const sample=bars.slice(-70).map(x=>({open:Number(x.open),high:Number(x.high),low:Number(x.low),close:Number(x.close)}))
+    .filter(x=>[x.open,x.high,x.low,x.close].every(Number.isFinite));
+  if(!sample.length){
+    box.innerHTML='<div style="width:100%;display:flex;align-items:center;justify-content:center;color:#8da5b7;font-size:13px">داده کندلی M5 نامعتبر است</div>';
+    return;
+  }
+  const hi=Math.max(...sample.map(x=>x.high)), lo=Math.min(...sample.map(x=>x.low)), span=hi-lo||1;
   sample.forEach(c=>{
-    const up=c.close>=c.open, top=(hi-c.high)/span*100, wh=(c.high-c.low)/span*100, btop=(hi-Math.max(c.open,c.close))/span*100, bh=Math.abs(c.close-c.open)/span*100;
-    const d=document.createElement('div'); d.className='bar'; d.style.setProperty('--wtop',top+'%'); d.style.setProperty('--wh',wh+'%'); d.style.setProperty('--btop',btop+'%'); d.style.setProperty('--bh',bh+'%'); d.style.setProperty('--bc',up?'#19df83':'#ff4d5f'); box.appendChild(d);
+    const up=c.close>=c.open;
+    const color=up?'#19df83':'#ff4d5f';
+    const top=(hi-c.high)/span*100;
+    const wh=Math.max((c.high-c.low)/span*100,0.8);
+    const btop=(hi-Math.max(c.open,c.close))/span*100;
+    const bh=Math.max(Math.abs(c.close-c.open)/span*100,0.8);
+    const d=document.createElement('div'); d.className='bar';
+    const wick=document.createElement('div'); wick.className='wick';
+    wick.style.top=top+'%'; wick.style.height=wh+'%'; wick.style.background=color;
+    const body=document.createElement('div'); body.className='body';
+    body.style.top=btop+'%'; body.style.height=bh+'%'; body.style.background=color;
+    d.appendChild(wick); d.appendChild(body); box.appendChild(d);
   });
 }
 function setLine(id,val,bars){
