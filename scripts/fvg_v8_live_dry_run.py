@@ -74,13 +74,21 @@ def fetch_closed_m5(limit: int = M5_LIMIT) -> tuple[list[dict], dict]:
         "api_bar_count": len(payload.get("bars", [])),
         "closed_bar_count": len(bars),
         "latest_closed_open_time": bars[-1]["openTime"],
+        "latest_closed_close_time": m5_close_time(bars[-1]["openTime"]).isoformat().replace("+00:00", "Z"),
     }
     return bars[-limit:], diagnostics
 
 
+def m5_close_time(open_time: str) -> datetime:
+    # Biquote labels each M5 candle by its opening time. A candle opened at
+    # 15:25 UTC is closed at 15:30 UTC, so freshness must be measured from
+    # the close time, not from the candle label/open time.
+    return pt(open_time) + timedelta(minutes=5)
+
+
 def freshness_minutes(open_time: str) -> float:
     now = datetime.now(timezone.utc)
-    return (now - pt(open_time)).total_seconds() / 60.0
+    return (now - m5_close_time(open_time)).total_seconds() / 60.0
 
 
 def timeframe_snapshot(m5: list[dict]) -> dict:
@@ -387,7 +395,8 @@ def main() -> None:
             "engine": "FVG_EXECUTABLE_AUDIT_V8_CAP4",
             "source": "Biquote",
             "fetched_at_utc": fetched_at,
-            "latest_closed_m5": latest,
+            "latest_closed_m5": m5_close_time(latest).isoformat().replace("+00:00", "Z"),
+            "latest_closed_m5_open_time": latest,
             "freshness_minutes": round(age, 2),
             "freshness_rule": "<= 30 minutes",
             "reason": "latest closed M5 candle is stale",
