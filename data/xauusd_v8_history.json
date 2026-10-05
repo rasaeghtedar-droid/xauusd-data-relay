@@ -1,0 +1,44 @@
+[
+  {
+    "signal_key": "SELL|2026-10-05T13:15:00Z",
+    "direction": "SELL",
+    "confirmation_time": "2026-10-05T13:15:00Z",
+    "formation_time": "2026-10-05T13:05:00Z",
+    "entry": 4154.475,
+    "sl": 4155.211,
+    "tp": 4151.529,
+    "rr": 4.0,
+    "status": "TP",
+    "result_r": 4.0,
+    "exit_time": "2026-10-05T13:20:00Z",
+    "icon": "✅"
+  },
+  {
+    "signal_key": "BUY|2026-10-05T10:10:00Z",
+    "direction": "BUY",
+    "confirmation_time": "2026-10-05T10:10:00Z",
+    "formation_time": "2026-10-05T07:45:00Z",
+    "entry": 4156.645,
+    "sl": 4155.061,
+    "tp": 4161.601,
+    "rr": 3.13,
+    "status": "TP",
+    "result_r": 3.13,
+    "exit_time": "2026-10-05T10:50:00Z",
+    "icon": "✅"
+  },
+  {
+    "signal_key": "SELL|2026-10-04T23:20:00Z",
+    "direction": "SELL",
+    "confirmation_time": "2026-10-04T23:20:00Z",
+    "formation_time": "2026-10-04T23:05:00Z",
+    "entry": 4146.39,
+    "sl": 4147.836,
+    "tp": 4142.765,
+    "rr": 2.51,
+    "status": "TP",
+    "result_r": 2.51,
+    "exit_time": "2026-10-04T23:45:00Z",
+    "icon": "✅"
+  }
+]
