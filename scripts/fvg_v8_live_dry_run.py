@@ -69,6 +69,27 @@ def freshness_minutes(open_time: str) -> float:
     return (now - pt(open_time)).total_seconds() / 60.0
 
 
+def timeframe_snapshot(m5: list[dict]) -> dict:
+    def snap(bars: list[dict]) -> dict:
+        if not bars:
+            return {"status": "DATA_NOT_AVAILABLE"}
+        c = bars[-1]
+        return {
+            "openTime": c["openTime"],
+            "open": c["open"],
+            "high": c["high"],
+            "low": c["low"],
+            "close": c["close"],
+            "direction": "BULLISH" if c["close"] >= c["open"] else "BEARISH",
+        }
+
+    return {
+        "H1": snap(agg(m5, 60)),
+        "M15": snap(agg(m5, 15)),
+        "M5": snap(m5),
+    }
+
+
 def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
     m15 = agg(m5, 15)
     m15_times = [pt(x["openTime"]) for x in m15]
@@ -306,6 +327,7 @@ def main() -> None:
             "freshness_minutes": round(age, 2),
             "reason": reason,
             "data": meta,
+            "timeframes": timeframe_snapshot(m5),
             "signal_key": signal_key,
             "signal": signal,
             "result": result,
