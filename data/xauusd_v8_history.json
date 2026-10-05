@@ -8,9 +8,10 @@
     "sl": 4132.776,
     "tp": 4137.811,
     "rr": 4.0,
-    "status": "PENDING",
-    "result_r": null,
-    "exit_time": null
+    "status": "TP",
+    "result_r": 4.0,
+    "exit_time": "2026-10-05T18:30:00Z",
+    "icon": "✅"
   },
   {
     "signal_key": "SELL|2026-10-05T13:15:00Z",
