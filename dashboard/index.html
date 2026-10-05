@@ -119,8 +119,8 @@ async function load(){
     const tfText=(key)=>{
       const x=tf[key];
       if(!x || x.status==='DATA_NOT_AVAILABLE') return '—';
-      const dir=x.direction==='BULLISH'?'BULLISH':x.direction==='BEARISH'?'BEARISH':'—';
-      return dir+' · '+fmt(x.close);
+      const bias=x.bias||x.structure;
+      return (bias||'NEUTRAL')+' · '+fmt(x.close);
     };
     $('h1').textContent=tfText('H1');
     $('m15').textContent=tfText('M15');
