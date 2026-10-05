@@ -50,7 +50,7 @@
           <div class="tv-wrap">
             <iframe
               title="TradingView PEPPERSTONE XAUUSD M5"
-              src="https://www.tradingview.com/widgetembed/?symbol=PEPPERSTONE%3AXAUUSD&interval=5&hidesidetoolbar=1&symboledit=0&saveimage=0&toolbarbg=%2306111b&studies=%5B%5D&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=1&hideideas=1&locale=en"
+              src="https://www.tradingview.com/widgetembed/?symbol=PEPPERSTONE%3AXAUUSD&interval=5&hidesidetoolbar=1&symboledit=0&saveimage=0&toolbarbg=%2306111b&studies=%5B%5D&theme=dark&style=1&timezone=Asia%2FTehran&withdateranges=1&hideideas=1&locale=en"
               style="width:100%;height:100%;border:0;border-radius:12px"
               loading="lazy"
               allowfullscreen>
@@ -85,6 +85,17 @@
 <script>
 const $=id=>document.getElementById(id);
 function fmt(v){return v==null?'—':Number(v).toFixed(3)}
+function fmtIranTime(v){
+  if(!v) return '—';
+  const d=new Date(v);
+  if(Number.isNaN(d.getTime())) return esc(v);
+  return new Intl.DateTimeFormat('fa-IR-u-ca-gregory',{
+    timeZone:'Asia/Tehran',
+    year:'numeric',month:'2-digit',day:'2-digit',
+    hour:'2-digit',minute:'2-digit',second:'2-digit',
+    hour12:false
+  }).format(d).replace(/،/g,' ');
+}
 function esc(v){return String(v??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
 function renderBars(bars){
   const box=$('bars'); box.innerHTML='';
@@ -137,7 +148,7 @@ async function load(){
     const r=await fetch('./data/xauusd_analysis.json?ts='+Date.now()); const d=await r.json(); const live=d.v8Cap4Live||{};
     $('market').textContent=live.status==='DATA_STALE'?'DATA STALE':live.status==='DATA_NOT_AVAILABLE'?'DATA UNAVAILABLE':'MONITORING';
     $('market').className='value '+(live.status==='DATA_STALE'?'warn':live.status==='DATA_NOT_AVAILABLE'?'bad':'ok');
-    $('status').textContent=live.status||'—'; $('last').textContent=live.latest_closed_m5||d.intervals?.['5m']?.latestClosed?.openTime||'—';
+    $('status').textContent=live.status||'—'; $('last').textContent=fmtIranTime(live.latest_closed_m5||d.intervals?.['5m']?.latestClosed?.openTime);
     $('fresh').textContent='Freshness: '+(live.freshness_minutes!=null?live.freshness_minutes+' min':'—'); $('fresh2').textContent=live.freshness_minutes!=null?live.freshness_minutes+' min':'—';
     const s=live.signal;
     const currentPrice=live.timeframes?.M5?.close ?? d.intervals?.['5m']?.latestClosed?.close;
@@ -167,8 +178,8 @@ async function load(){
     $('historyRows').innerHTML=history.length?history.map(x=>{
       const status=x.status||'PENDING';
       const icon=status==='TP'?'✅':status==='SL'?'❌':status==='AMBIGUOUS'?'⚠️':'⏳';
-      const time=x.confirmation_time||x.exit_time||'—';
-      return '<div class="row"><div>'+esc(time)+'</div><div class="tag '+(x.direction==='BUY'?'buy':'sell')+'">'+esc(x.direction)+'</div><div>'+fmt(x.entry)+'</div><div>'+esc(x.rr??'—')+'</div><div class="result '+(status==='TP'?'ok':status==='SL'?'bad':'pending')+'">'+icon+' '+esc(status)+'</div></div>';
+      const time=fmtIranTime(x.confirmation_time||x.exit_time);
+      return '<div class="row"><div>'+time+'</div><div class="tag '+(x.direction==='BUY'?'buy':'sell')+'">'+esc(x.direction)+'</div><div>'+fmt(x.entry)+'</div><div>'+esc(x.rr??'—')+'</div><div class="result '+(status==='TP'?'ok':status==='SL'?'bad':'pending')+'">'+icon+' '+esc(status)+'</div></div>';
     }).join(''):'<div class="row"><div>—</div><div>—</div><div>—</div><div>—</div><div class="pending">هنوز سیگنالی ثبت نشده</div></div>';
     // The visual chart is now the live TradingView PEPPERSTONE:XAUUSD M5 feed.
     // Keep Biquote candles for V8 engine/data diagnostics until the analysis source
