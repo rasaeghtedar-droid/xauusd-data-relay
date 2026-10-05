@@ -239,8 +239,24 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
             else:
                 bisect.insort(invalid_index["SELL"], (f["hi"], fid))
 
-    if active is not None and latest_signal is None:
-        latest_reason = latest_reason if latest_reason != "no new signal on latest closed M5 candle" else "one active V8 trade exists; no new signal"
+    # The workflow starts from a clean checkout on every run. Therefore the
+    # live decision must be reconstructed from the rolling closed-candle window,
+    # not from a previous workspace file. If a V8 trade is still active at the
+    # end of the replay, expose that active trade as the current signal.
+    if active is not None:
+        latest_signal = {
+            "engine": "FVG_EXECUTABLE_AUDIT_V8_CAP4",
+            "direction": active["direction"],
+            "formation_time": active["formation_time"],
+            "confirmation_time": active["confirmation_time"],
+            "entry": active["entry"],
+            "sl": active["sl"],
+            "tp": active["tp"],
+            "rr": active["rr"],
+            "target_rule": active.get("target_rule", "V8_CAP4"),
+            "status": "ACTIVE",
+        }
+        latest_reason = "active V8 trade reconstructed from closed M5 replay"
 
     return latest_signal, latest_reason, {
         "m5_closed": len(m5),
