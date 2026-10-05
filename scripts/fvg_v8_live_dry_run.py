@@ -141,32 +141,35 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
             tp_hit = (c["high"] >= active["tp"]) if active["direction"] == "BUY" else (c["low"] <= active["tp"])
 
             if sl_hit or tp_hit:
-                if c["openTime"] == latest_time:
-                    if sl_hit and tp_hit:
-                        outcome = "AMBIGUOUS"
-                        result_icon = "⚠️"
-                        result_r = 0.0
-                    elif tp_hit:
-                        outcome = "TP"
-                        result_icon = "✅"
-                        result_r = active["rr"]
-                    else:
-                        outcome = "SL"
-                        result_icon = "❌"
-                        result_r = -1.0
+                if sl_hit and tp_hit:
+                    outcome = "AMBIGUOUS"
+                    result_icon = "⚠️"
+                    result_r = 0.0
+                elif tp_hit:
+                    outcome = "TP"
+                    result_icon = "✅"
+                    result_r = active["rr"]
+                else:
+                    outcome = "SL"
+                    result_icon = "❌"
+                    result_r = -1.0
 
-                    latest_result = {
-                        "status": outcome,
-                        "icon": result_icon,
-                        "signal_key": f'{active["direction"]}|{active["confirmation_time"]}',
-                        "direction": active["direction"],
-                        "entry": active["entry"],
-                        "sl": active["sl"],
-                        "tp": active["tp"],
-                        "rr": active["rr"],
-                        "result_r": round(result_r, 2),
-                        "exit_time": c["openTime"],
-                    }
+                # Keep the most recent completed result from the replay window,
+                # even when the exit happened before the newest M5 candle.
+                # This prevents a clean workflow run from turning a completed
+                # trade into a misleading NO TRADE display.
+                latest_result = {
+                    "status": outcome,
+                    "icon": result_icon,
+                    "signal_key": f'{active["direction"]}|{active["confirmation_time"]}',
+                    "direction": active["direction"],
+                    "entry": active["entry"],
+                    "sl": active["sl"],
+                    "tp": active["tp"],
+                    "rr": active["rr"],
+                    "result_r": round(result_r, 2),
+                    "exit_time": c["openTime"],
+                }
 
                 active = None
 
