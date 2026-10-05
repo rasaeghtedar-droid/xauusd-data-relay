@@ -6,7 +6,7 @@ on:
     - cron: "*/5 * * * *"
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -31,6 +31,19 @@ jobs:
         run: |
           set -euo pipefail
           python scripts/fvg_v8_live_dry_run.py
+
+      - name: Persist V8 signal history
+        run: |
+          set -euo pipefail
+          if [ -f data/xauusd_v8_history.json ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/xauusd_v8_history.json
+            if ! git diff --cached --quiet; then
+              git commit -m "Persist V8 signal history"
+              git push origin HEAD:experiment-fvg-setups
+            fi
+          fi
 
       - name: Prepare dashboard site
         run: |
