@@ -13,9 +13,9 @@
 .label{color:var(--muted);font-size:12px}.value{font-size:17px;font-weight:700;margin-top:7px}.ok{color:var(--green)}.warn{color:var(--gold)}.bad{color:var(--red)}
 .main{display:grid;grid-template-columns:1.7fr 1fr;gap:14px;margin-top:14px}.signal{padding:16px}.signal-head{display:grid;grid-template-columns:1.1fr repeat(4,1fr);gap:10px}.direction{border:1px solid var(--green);border-radius:14px;padding:18px;text-align:center;color:var(--green);font-size:35px;font-weight:800;background:#0b2c22}.direction.sell{color:var(--red);border-color:var(--red);background:#32131a}.direction.none{color:var(--muted);border-color:var(--line);background:#0b1823}.mini{border:1px solid var(--line);border-radius:12px;padding:12px}.mini b{display:block;margin-top:7px;font-size:17px}.levels{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}.level{padding:15px;border-radius:12px;text-align:center;border:1px solid var(--line)}.level b{display:block;font-size:21px;margin-top:5px}.entry{border-color:var(--blue)}.sl{border-color:var(--red)}.tp{border-color:var(--green)}.rr{border-color:var(--purple)}
 .chart{margin-top:14px;padding:14px}.chart-head{display:flex;justify-content:space-between;gap:10px;margin-bottom:8px}.chartbox{height:330px;position:relative;overflow:hidden;border-radius:12px;background:#07141f;border:1px solid #173347}.tv-wrap{position:relative;width:100%;height:100%}.signal-overlay{position:absolute;inset:0;pointer-events:none;z-index:5;display:none}.signal-overlay .sline{position:absolute;left:0;right:0;border-top:2px dashed;filter:drop-shadow(0 0 2px #000)}.signal-overlay .sline span{position:absolute;right:8px;top:-13px;padding:3px 7px;border-radius:5px;background:rgba(7,20,31,.92);font-size:11px;font-weight:700}.signal-overlay .entry-line{border-color:var(--blue)}.signal-overlay .entry-line span{color:var(--blue)}.signal-overlay .tp-line{border-color:var(--green)}.signal-overlay .tp-line span{color:var(--green)}.signal-overlay .sl-line{border-color:var(--red)}.signal-overlay .sl-line span{color:var(--red)}.bars{height:100%;display:flex;align-items:stretch;padding:20px 10px;gap:2px}.bar{flex:1;position:relative}.wick{position:absolute;left:50%;width:1px;transform:translateX(-50%);top:var(--wtop);height:var(--wh);background:var(--bc)}.body{position:absolute;left:20%;right:20%;top:var(--btop);height:max(3px,var(--bh));background:var(--bc);border-radius:2px}.line{position:absolute;left:0;right:0;border-top:1px dashed}.line span{position:absolute;right:8px;top:-11px;padding:3px 7px;border-radius:5px;background:#07141f;font-size:11px}.line.tp{top:18%;border-color:var(--green)}.line.entry{top:51%;border-color:var(--blue)}.line.sl{top:82%;border-color:var(--red)}
-.history{padding:14px;overflow:auto}.history h2,.bottom h2{font-size:17px;margin:3px 0 12px}.row{display:grid;grid-template-columns:1.3fr .6fr .8fr .8fr .65fr;gap:7px;padding:10px 5px;border-bottom:1px solid #173043;align-items:center;font-size:12px}.row.head{color:var(--muted);font-size:11px}.tag{padding:4px 7px;border-radius:5px;text-align:center;font-weight:700}.buy{background:#083c2b;color:var(--green)}.sell{background:#481823;color:#ff7380}.result{font-size:16px;text-align:center}.pending{color:var(--gold)}
+.history{padding:14px;overflow:auto}.history h2,.bottom h2{font-size:17px;margin:3px 0 12px}.row{display:grid;grid-template-columns:1.25fr .55fr .8fr .8fr .8fr .6fr .7fr;gap:7px;padding:10px 5px;border-bottom:1px solid #173043;align-items:center;font-size:12px}.row.head{color:var(--muted);font-size:11px}.tag{padding:4px 7px;border-radius:5px;text-align:center;font-weight:700}.buy{background:#083c2b;color:var(--green)}.sell{background:#481823;color:#ff7380}.result{font-size:16px;text-align:center}.pending{color:var(--gold)}
 .bottom{margin-top:14px;padding:14px;display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:14px}.sub{border:1px solid var(--line);border-radius:12px;padding:14px}.metric{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #173043}.metric:last-child{border-bottom:0}.footer{margin-top:12px;color:var(--muted);font-size:11px;text-align:center}
-@media(max-width:950px){.top,.main,.bottom{grid-template-columns:1fr}.signal-head{grid-template-columns:1fr 1fr}.direction{grid-column:1/-1}.levels{grid-template-columns:1fr 1fr}}
+@media(max-width:950px){.top,.main,.bottom{grid-template-columns:1fr}.signal-head{grid-template-columns:1fr 1fr}.direction{grid-column:1/-1}.levels{grid-template-columns:1fr 1fr}.row{grid-template-columns:1.15fr .55fr .75fr .75fr .75fr .55fr .7fr;min-width:620px}.history{overflow-x:auto}}
 </style>
 </head>
 <body>
@@ -68,7 +68,7 @@
     <div class="history">
       <h2>تمام سیگنال‌ها / نتایج</h2>
       <div id="historyStats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:10px"></div>
-      <div class="row head"><div>زمان</div><div>نوع</div><div>ورود</div><div>RR</div><div>نتیجه</div></div>
+      <div class="row head"><div>زمان</div><div>نوع</div><div>ورود</div><div>SL</div><div>TP</div><div>RR</div><div>نتیجه</div></div>
       <div id="historyRows"><div class="row"><div>—</div><div>—</div><div>—</div><div>—</div><div class="pending">در انتظار داده</div></div></div>
       <div style="margin-top:14px" class="label">نتیجه هر معامله بعد از برخورد TP/SL ثبت می‌شود.</div>
     </div>
@@ -154,13 +154,16 @@ async function load(){
     const currentPrice=live.timeframes?.M5?.close ?? d.intervals?.['5m']?.latestClosed?.close;
     const history=Array.isArray(live.history)?live.history:[];
     // If the latest signal is still pending but the current M5 candle no longer
-    // emits a fresh signal, keep its Entry/TP/SL overlay visible on the chart.
-    const pendingSignal=history.find(x=>x && x.status==='PENDING');
-    const chartSignal=s || pendingSignal;
-    updateSignalOverlay(chartSignal,currentPrice);
-    $('direction').textContent=s?.direction||'NO TRADE'; $('direction').className='direction '+(s?.direction==='SELL'?'sell':s?.direction==='BUY'?'':'none');
-    $('entry').textContent=fmt(s?.entry); $('sl').textContent=fmt(s?.sl); $('tp').textContent=fmt(s?.tp); $('rr').textContent=s?.rr!=null?'1 : '+s.rr:'—';
-    $('confidence').textContent=s?'HIGH':'—'; $('score').textContent=s?'—':'—';
+    // emits a fresh signal, keep its Entry/TP/SL visible both on the chart and
+    // in the main signal card.
+    const pendingSignal=history.find(x=>x&&x.status==='PENDING');
+    const displaySignal=s||pendingSignal;
+    updateSignalOverlay(displaySignal,currentPrice);
+    const displayDir=displaySignal?.direction;
+    $('direction').textContent=displaySignal?(displaySignal.status==='PENDING'?'PENDING · '+displayDir:displayDir):'NO TRADE';
+    $('direction').className='direction '+(displayDir==='SELL'?'sell':displayDir==='BUY'?'':'none');
+    $('entry').textContent=fmt(displaySignal?.entry); $('sl').textContent=fmt(displaySignal?.sl); $('tp').textContent=fmt(displaySignal?.tp); $('rr').textContent=displaySignal?.rr!=null?'1 : '+displaySignal.rr:'—';
+    $('confidence').textContent=displaySignal?'HIGH':'—'; $('score').textContent=displaySignal?'—':'—';
 
     const tf=live.timeframes||{};
     const tfText=(key)=>{
@@ -183,7 +186,7 @@ async function load(){
       const status=x.status||'PENDING';
       const icon=status==='TP'?'✅':status==='SL'?'❌':status==='AMBIGUOUS'?'⚠️':'⏳';
       const time=fmtIranTime(x.confirmation_time||x.exit_time);
-      return '<div class="row"><div>'+time+'</div><div class="tag '+(x.direction==='BUY'?'buy':'sell')+'">'+esc(x.direction)+'</div><div>'+fmt(x.entry)+'</div><div>'+esc(x.rr??'—')+'</div><div class="result '+(status==='TP'?'ok':status==='SL'?'bad':'pending')+'">'+icon+' '+esc(status)+'</div></div>';
+      return '<div class="row"><div>'+time+'</div><div class="tag '+(x.direction==='BUY'?'buy':'sell')+'">'+esc(x.direction)+'</div><div>'+fmt(x.entry)+'</div><div>'+fmt(x.sl)+'</div><div>'+fmt(x.tp)+'</div><div>'+esc(x.rr??'—')+'</div><div class="result '+(status==='TP'?'ok':status==='SL'?'bad':'pending')+'">'+icon+' '+esc(status)+'</div></div>';
     }).join(''):'<div class="row"><div>—</div><div>—</div><div>—</div><div>—</div><div class="pending">هنوز سیگنالی ثبت نشده</div></div>';
     // The visual chart is now the live TradingView PEPPERSTONE:XAUUSD M5 feed.
     // Keep Biquote candles for V8 engine/data diagnostics until the analysis source
