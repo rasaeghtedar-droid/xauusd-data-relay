@@ -161,6 +161,27 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
         had_active = active is not None
 
         if active is not None:
+            # A V8 signal is NOT a trade until price actually touches Entry.
+            # Before Entry, TP/SL must never resolve the signal. This prevents
+            # a one-way move from Entry -> TP from being counted as a TP when
+            # the real signal was never executable.
+            if not active.get("entry_activated", False):
+                entry_hit = (
+                    c["low"] <= active["entry"]
+                    if active["direction"] == "BUY"
+                    else c["high"] >= active["entry"]
+                )
+                if entry_hit:
+                    active["entry_activated"] = True
+                    active["activation_time"] = c["openTime"]
+                    if active_history is not None:
+                        active_history["status"] = "ACTIVE"
+                        active_history["activation_time"] = c["openTime"]
+                # If Entry was not touched, this signal remains pending and
+                # the one-active-trade rule stays in force.
+                if not active.get("entry_activated", False):
+                    continue
+
             sl_hit = (c["low"] <= active["sl"]) if active["direction"] == "BUY" else (c["high"] >= active["sl"])
             tp_hit = (c["high"] >= active["tp"]) if active["direction"] == "BUY" else (c["low"] <= active["tp"])
 
@@ -178,10 +199,6 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
                     result_icon = "❌"
                     result_r = -1.0
 
-                # Keep the most recent completed result from the replay window,
-                # even when the exit happened before the newest M5 candle.
-                # This prevents a clean workflow run from turning a completed
-                # trade into a misleading NO TRADE display.
                 latest_result = {
                     "status": outcome,
                     "icon": result_icon,
@@ -192,6 +209,7 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
                     "tp": active["tp"],
                     "rr": active["rr"],
                     "result_r": round(result_r, 2),
+                    "activation_time": active.get("activation_time"),
                     "exit_time": c["openTime"],
                 }
 
@@ -264,6 +282,8 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
                 if had_active:
                     latest_reason = "valid V8 confirmation was missed because one active trade already existed"
                 else:
+                    candidate["entry_activated"] = False
+                    candidate["activation_time"] = None
                     active = candidate
                     active_history = {
                         "signal_key": f'{candidate["direction"]}|{candidate["confirmation_time"]}',
@@ -276,6 +296,7 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
                         "rr": candidate["rr"],
                         "status": "PENDING",
                         "result_r": None,
+                        "activation_time": None,
                         "exit_time": None,
                     }
                     latest_signal = {
@@ -288,7 +309,7 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
                         "tp": candidate["tp"],
                         "rr": candidate["rr"],
                         "target_rule": "min(structural target, 4R)",
-                        "status": "SIGNAL",
+                        "status": "PENDING_ENTRY",
                     }
                     latest_reason = "new V8 Cap4 confirmation on latest closed M5 candle"
 
@@ -296,6 +317,8 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
             if active is None and confirmed:
                 confirmed.sort(key=lambda x: x["formed_index"])
                 active = confirmed[0]
+                active["entry_activated"] = False
+                active["activation_time"] = None
                 active_history = {
                     "signal_key": f'{active["direction"]}|{active["confirmation_time"]}',
                     "direction": active["direction"],
@@ -307,6 +330,7 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
                     "rr": active["rr"],
                     "status": "PENDING",
                     "result_r": None,
+                    "activation_time": None,
                     "exit_time": None,
                 }
 
@@ -330,6 +354,7 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
     # not from a previous workspace file. If a V8 trade is still active at the
     # end of the replay, expose that active trade as the current signal.
     if active is not None:
+        entry_activated = bool(active.get("entry_activated", False))
         latest_signal = {
             "engine": "FVG_EXECUTABLE_AUDIT_V8_CAP4",
             "direction": active["direction"],
@@ -340,9 +365,14 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
             "tp": active["tp"],
             "rr": active["rr"],
             "target_rule": active.get("target_rule", "V8_CAP4"),
-            "status": "ACTIVE",
+            "status": "ACTIVE" if entry_activated else "PENDING_ENTRY",
+            "activation_time": active.get("activation_time"),
         }
-        latest_reason = "active V8 trade reconstructed from closed M5 replay"
+        latest_reason = (
+            "active V8 trade waiting for Entry touch"
+            if not entry_activated
+            else "active V8 trade reconstructed from closed M5 replay"
+        )
         if active_history is not None:
             trade_history.append(dict(active_history))
 
@@ -449,6 +479,7 @@ def main() -> None:
                     "rr": signal["rr"],
                     "status": "PENDING",
                     "result_r": None,
+                    "activation_time": signal.get("activation_time"),
                     "exit_time": None,
                 }
 
