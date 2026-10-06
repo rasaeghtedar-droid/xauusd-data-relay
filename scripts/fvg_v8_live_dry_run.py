@@ -35,6 +35,10 @@ HISTORY_PATH = ROOT / "data" / "xauusd_v8_history.json"
 BASE_URL = "https://biquote.io/api/XAUUSD/ohlc"
 M5_LIMIT = 1000
 FRESHNESS_MINUTES = 30.0
+# A confirmed signal that has not touched Entry expires after this many
+# minutes. This prevents a setup from remaining actionable indefinitely while
+# price keeps moving away from the FVG.
+PENDING_ENTRY_MAX_MINUTES = 60
 
 
 def fetch_closed_m5(limit: int = M5_LIMIT) -> tuple[list[dict], dict]:
@@ -166,22 +170,50 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
             # a one-way move from Entry -> TP from being counted as a TP when
             # the real signal was never executable.
             if not active.get("entry_activated", False):
-                entry_hit = (
-                    c["low"] <= active["entry"]
-                    if active["direction"] == "BUY"
-                    else c["high"] >= active["entry"]
-                )
-                if entry_hit:
-                    active["entry_activated"] = True
-                    active["activation_time"] = c["openTime"]
+                # Pending-entry validity window: 60 minutes from confirmation.
+                # If Entry is not touched inside this window, the setup expires
+                # and is no longer actionable.
+                confirmation_dt = pt(active["confirmation_time"])
+                current_dt = pt(c["openTime"])
+                pending_age_minutes = (current_dt - confirmation_dt).total_seconds() / 60.0
+                if pending_age_minutes >= PENDING_ENTRY_MAX_MINUTES:
+                    latest_result = {
+                        "status": "EXPIRED",
+                        "icon": "⌛",
+                        "signal_key": f'{active["direction"]}|{active["confirmation_time"]}',
+                        "direction": active["direction"],
+                        "entry": active["entry"],
+                        "sl": active["sl"],
+                        "tp": active["tp"],
+                        "rr": active["rr"],
+                        "result_r": 0.0,
+                        "activation_time": None,
+                        "exit_time": c["openTime"],
+                        "expiry_reason": "Entry not touched within 60 minutes",
+                    }
                     if active_history is not None:
-                        active_history["status"] = "ACTIVE"
-                        active_history["activation_time"] = c["openTime"]
-                # If Entry was not touched, this signal remains pending and
-                # the one-active-trade rule stays in force.
-                if not active.get("entry_activated", False):
-                    continue
-
+                        active_history.update(latest_result)
+                        trade_history.append(dict(active_history))
+                    else:
+                        trade_history.append(dict(latest_result))
+                    active = None
+                    active_history = None
+                else:
+                    entry_hit = (
+                        c["low"] <= active["entry"]
+                        if active["direction"] == "BUY"
+                        else c["high"] >= active["entry"]
+                    )
+                    if entry_hit:
+                        active["entry_activated"] = True
+                        active["activation_time"] = c["openTime"]
+                        if active_history is not None:
+                            active_history["status"] = "ACTIVE"
+                            active_history["activation_time"] = c["openTime"]
+                    # If Entry was not touched, this signal remains pending and
+                    # the one-active-trade rule stays in force.
+                    if not active.get("entry_activated", False):
+                        continue
             sl_hit = (c["low"] <= active["sl"]) if active["direction"] == "BUY" else (c["high"] >= active["sl"])
             tp_hit = (c["high"] >= active["tp"]) if active["direction"] == "BUY" else (c["low"] <= active["tp"])
 
@@ -284,6 +316,7 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
                 else:
                     candidate["entry_activated"] = False
                     candidate["activation_time"] = None
+                    candidate["pending_expiry_minutes"] = PENDING_ENTRY_MAX_MINUTES
                     active = candidate
                     active_history = {
                         "signal_key": f'{candidate["direction"]}|{candidate["confirmation_time"]}',
@@ -297,6 +330,7 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
                         "status": "PENDING",
                         "result_r": None,
                         "activation_time": None,
+                        "pending_expiry_minutes": PENDING_ENTRY_MAX_MINUTES,
                         "exit_time": None,
                     }
                     latest_signal = {
@@ -319,6 +353,7 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
                 active = confirmed[0]
                 active["entry_activated"] = False
                 active["activation_time"] = None
+                active["pending_expiry_minutes"] = PENDING_ENTRY_MAX_MINUTES
                 active_history = {
                     "signal_key": f'{active["direction"]}|{active["confirmation_time"]}',
                     "direction": active["direction"],
@@ -331,6 +366,7 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
                     "status": "PENDING",
                     "result_r": None,
                     "activation_time": None,
+                    "pending_expiry_minutes": PENDING_ENTRY_MAX_MINUTES,
                     "exit_time": None,
                 }
 
@@ -367,6 +403,7 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
             "target_rule": active.get("target_rule", "V8_CAP4"),
             "status": "ACTIVE" if entry_activated else "PENDING_ENTRY",
             "activation_time": active.get("activation_time"),
+            "pending_expiry_minutes": PENDING_ENTRY_MAX_MINUTES,
         }
         latest_reason = (
             "active V8 trade waiting for Entry touch"
@@ -480,6 +517,7 @@ def main() -> None:
                     "status": "PENDING",
                     "result_r": None,
                     "activation_time": signal.get("activation_time"),
+                    "pending_expiry_minutes": PENDING_ENTRY_MAX_MINUTES,
                     "exit_time": None,
                 }
 
