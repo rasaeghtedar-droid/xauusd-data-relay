@@ -152,7 +152,12 @@ async function load(){
     $('fresh').textContent='Freshness: '+(live.freshness_minutes!=null?live.freshness_minutes+' min':'—'); $('fresh2').textContent=live.freshness_minutes!=null?live.freshness_minutes+' min':'—';
     const s=live.signal;
     const currentPrice=live.timeframes?.M5?.close ?? d.intervals?.['5m']?.latestClosed?.close;
-    updateSignalOverlay(s,currentPrice);
+    const history=Array.isArray(live.history)?live.history:[];
+    // If the latest signal is still pending but the current M5 candle no longer
+    // emits a fresh signal, keep its Entry/TP/SL overlay visible on the chart.
+    const pendingSignal=history.find(x=>x && x.status==='PENDING');
+    const chartSignal=s || pendingSignal;
+    updateSignalOverlay(chartSignal,currentPrice);
     $('direction').textContent=s?.direction||'NO TRADE'; $('direction').className='direction '+(s?.direction==='SELL'?'sell':s?.direction==='BUY'?'':'none');
     $('entry').textContent=fmt(s?.entry); $('sl').textContent=fmt(s?.sl); $('tp').textContent=fmt(s?.tp); $('rr').textContent=s?.rr!=null?'1 : '+s.rr:'—';
     $('confidence').textContent=s?'HIGH':'—'; $('score').textContent=s?'—':'—';
@@ -167,7 +172,6 @@ async function load(){
     $('h1').textContent=tfText('H1');
     $('m15').textContent=tfText('M15');
     $('m5').textContent=tfText('M5');
-    const history=Array.isArray(live.history)?live.history:[];
     const hs=live.history_stats||{};
     $('historyStats').innerHTML=[
       ['کل سیگنال',hs.total??history.length,''],
