@@ -12,7 +12,8 @@
     "result_r": 4.0,
     "exit_time": "2026-10-06T16:45:00Z",
     "icon": "✅",
-    "activation_time": "2026-10-06T15:50:00Z"
+    "activation_time": "2026-10-06T15:50:00Z",
+    "pending_expiry_minutes": 60
   },
   {
     "signal_key": "SELL|2026-10-06T05:05:00Z",
@@ -27,7 +28,8 @@
     "result_r": 4.0,
     "exit_time": "2026-10-06T05:55:00Z",
     "icon": "✅",
-    "activation_time": "2026-10-06T05:15:00Z"
+    "activation_time": "2026-10-06T05:15:00Z",
+    "pending_expiry_minutes": 60
   },
   {
     "signal_key": "BUY|2026-10-06T03:35:00Z",
@@ -42,7 +44,8 @@
     "result_r": 2.25,
     "exit_time": "2026-10-06T03:40:00Z",
     "icon": "✅",
-    "activation_time": "2026-10-06T03:40:00Z"
+    "activation_time": "2026-10-06T03:40:00Z",
+    "pending_expiry_minutes": 60
   },
   {
     "signal_key": "BUY|2026-10-05T18:25:00Z",
