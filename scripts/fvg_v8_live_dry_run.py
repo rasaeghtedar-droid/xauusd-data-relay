@@ -39,6 +39,10 @@ FRESHNESS_MINUTES = 30.0
 # minutes. This prevents a setup from remaining actionable indefinitely while
 # price keeps moving away from the FVG.
 PENDING_ENTRY_MAX_MINUTES = 60
+# Pending-entry technical invalidation:
+# BUY is invalidated by a CLOSED M5 candle below the original FVG low.
+# SELL is invalidated by a CLOSED M5 candle above the original FVG high.
+# A wick alone does not cancel the setup; the invalidation requires a close.
 
 
 def fetch_closed_m5(limit: int = M5_LIMIT) -> tuple[list[dict], dict]:
@@ -170,12 +174,46 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
             # a one-way move from Entry -> TP from being counted as a TP when
             # the real signal was never executable.
             if not active.get("entry_activated", False):
+                # Technical invalidation has priority over the 60-minute timer.
+                # We use the original FVG boundary and a CLOSED M5 candle:
+                # BUY -> close below FVG low = bullish setup invalid.
+                # SELL -> close above FVG high = bearish setup invalid.
+                # A wick through the boundary alone does not cancel it.
+                technical_invalid = (
+                    c["close"] < active["zone_lo"]
+                    if active["direction"] == "BUY"
+                    else c["close"] > active["zone_hi"]
+                )
+                if technical_invalid:
+                    latest_result = {
+                        "status": "INVALIDATED",
+                        "icon": "⚠️",
+                        "signal_key": f'{active["direction"]}|{active["confirmation_time"]}',
+                        "direction": active["direction"],
+                        "entry": active["entry"],
+                        "sl": active["sl"],
+                        "tp": active["tp"],
+                        "rr": active["rr"],
+                        "result_r": 0.0,
+                        "activation_time": None,
+                        "exit_time": c["openTime"],
+                        "expiry_reason": "technical invalidation: closed M5 candle crossed the FVG boundary",
+                    }
+                    if active_history is not None:
+                        active_history.update(latest_result)
+                        trade_history.append(dict(active_history))
+                    else:
+                        trade_history.append(dict(latest_result))
+                    active = None
+                    active_history = None
                 # Pending-entry validity window: 60 minutes from confirmation.
                 # If Entry is not touched inside this window, the setup expires
                 # and is no longer actionable.
                 confirmation_dt = pt(active["confirmation_time"])
                 current_dt = pt(c["openTime"])
                 pending_age_minutes = (current_dt - confirmation_dt).total_seconds() / 60.0
+                if active is None:
+                    continue
                 if pending_age_minutes >= PENDING_ENTRY_MAX_MINUTES:
                     latest_result = {
                         "status": "EXPIRED",
@@ -367,6 +405,7 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
                     "result_r": None,
                     "activation_time": None,
                     "pending_expiry_minutes": PENDING_ENTRY_MAX_MINUTES,
+                    "pending_invalidation_rule": "closed M5 candle beyond original FVG boundary",
                     "exit_time": None,
                 }
 
@@ -404,6 +443,7 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
             "status": "ACTIVE" if entry_activated else "PENDING_ENTRY",
             "activation_time": active.get("activation_time"),
             "pending_expiry_minutes": PENDING_ENTRY_MAX_MINUTES,
+            "pending_invalidation_rule": "closed M5 candle beyond original FVG boundary",
         }
         latest_reason = (
             "active V8 trade waiting for Entry touch"
