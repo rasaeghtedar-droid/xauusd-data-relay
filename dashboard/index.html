@@ -153,15 +153,16 @@ async function load(){
     const s=live.signal;
     const currentPrice=live.timeframes?.M5?.close ?? d.intervals?.['5m']?.latestClosed?.close;
     const history=Array.isArray(live.history)?live.history:[];
-    // If the latest signal is still pending but the current M5 candle no longer
-    // If the latest signal is still pending but the current M5 candle no longer
-    // emits a fresh signal, keep its Entry/TP/SL overlay visible on the chart.
-    const pendingSignal=history.find(x=>x && x.status==='PENDING');
-    const chartSignal=s || pendingSignal;
-    updateSignalOverlay(chartSignal,currentPrice);
-    $('direction').textContent=s?.direction||'NO TRADE'; $('direction').className='direction '+(s?.direction==='SELL'?'sell':s?.direction==='BUY'?'':'none');
-    $('entry').textContent=fmt(s?.entry); $('sl').textContent=fmt(s?.sl); $('tp').textContent=fmt(s?.tp); $('rr').textContent=s?.rr!=null?'1 : '+s.rr:'—';
-    $('confidence').textContent=s?'HIGH':'—'; $('score').textContent=s?'—':'—';
+    // When V8 has an active/pending trade reconstructed from history but the
+    // current M5 candle has no fresh signal, the backend may legitimately leave
+    // live.signal empty. The active trade is still the authoritative dashboard
+    // signal and must keep Entry/SL/TP visible.
+    const pendingSignal=history.find(x=>x && (x.status==='PENDING' || x.status==='ACTIVE'));
+    const activeSignal=s || pendingSignal;
+    updateSignalOverlay(activeSignal,currentPrice);
+    $('direction').textContent=activeSignal?.direction||'NO TRADE'; $('direction').className='direction '+(activeSignal?.direction==='SELL'?'sell':activeSignal?.direction==='BUY'?'':'none');
+    $('entry').textContent=fmt(activeSignal?.entry); $('sl').textContent=fmt(activeSignal?.sl); $('tp').textContent=fmt(activeSignal?.tp); $('rr').textContent=activeSignal?.rr!=null?'1 : '+activeSignal.rr:'—';
+    $('confidence').textContent=activeSignal?'HIGH':'—'; $('score').textContent=activeSignal?.score!=null?activeSignal.score:'—';
 
     const tf=live.timeframes||{};
     const tfText=(key)=>{
