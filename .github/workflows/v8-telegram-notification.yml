@@ -1,0 +1,40 @@
+name: V8 Telegram Notification
+
+on:
+  workflow_run:
+    workflows: ["V8 Cap4 Dashboard"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  notify:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout V8 experiment branch
+        uses: actions/checkout@v4
+        with:
+          ref: experiment-fvg-setups
+
+      - name: Send new V8 signal to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          set -euo pipefail
+          python scripts/v8_telegram_notify.py
+
+      - name: Persist Telegram notification state
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -f data/xauusd_v8_telegram_state.json ]; then
+            git add data/xauusd_v8_telegram_state.json
+            if ! git diff --cached --quiet; then
+              git commit -m "Persist V8 Telegram notification state"
+              git push origin HEAD:experiment-fvg-setups
+            fi
+          fi
