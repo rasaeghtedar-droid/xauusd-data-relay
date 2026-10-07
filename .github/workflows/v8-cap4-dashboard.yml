@@ -9,9 +9,8 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
-  queue: max
-  cancel-in-progress: false
+  group: "v8-cap4-dashboard"
+  cancel-in-progress: true
 
 jobs:
   deploy:
