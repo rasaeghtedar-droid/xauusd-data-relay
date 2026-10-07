@@ -35,11 +35,11 @@ jobs:
           payload = json.loads(Path("/tmp/xauusd_analysis.json").read_text(encoding="utf-8"))
           bars = payload["intervals"]["5m"]["bars"]
 
-          if len(bars) < 100:
-              raise RuntimeError(f"Need at least 100 closed M5 bars for 50-bar evaluation; got {len(bars)}")
+          if len(bars) < 150:
+              raise RuntimeError(f"Need at least 150 closed M5 bars for 100-bar evaluation; got {len(bars)}")
 
-          # Keep 50 warm-up candles + the last 50 evaluation candles.
-          test_bars = bars[-100:]
+          # Keep 50 warm-up candles + the last 100 evaluation candles.
+          test_bars = bars[-150:]
 
           import scripts.fvg_executable_audit_v8 as audit
 
