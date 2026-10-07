@@ -21,9 +21,15 @@ jobs:
 
           message = "🧪 XAUUSD V8 Cap4 — TELEGRAM TEST\n\nV8 Engine اجرا نشده است.\nAuto Trade DISABLED"
 
-          url = f"https://api.telegram.org/bot{os.environ['TELEGRAM_BOT_TOKEN']}/sendMessage"
+          token = os.environ["TELEGRAM_BOT_TOKEN"].strip()
+          chat_id = os.environ["TELEGRAM_CHAT_ID"].strip()
+
+          if not token or not chat_id:
+              raise RuntimeError("Telegram credentials are empty after trimming.")
+
+          url = f"https://api.telegram.org/bot{token}/sendMessage"
           body = urllib.parse.urlencode({
-              "chat_id": os.environ["TELEGRAM_CHAT_ID"],
+              "chat_id": chat_id,
               "text": message,
           }).encode()
 
