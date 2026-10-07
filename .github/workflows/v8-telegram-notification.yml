@@ -4,8 +4,6 @@ on:
   workflow_run:
     workflows: ["V8 Cap4 Dashboard"]
     types: [completed]
-  schedule:
-    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -18,7 +16,7 @@ concurrency:
 
 jobs:
   notify:
-    if: \${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout V8 experiment branch
@@ -27,45 +25,19 @@ jobs:
           ref: experiment-fvg-setups
 
       - name: Download V8 payload from triggering run
-        if: \${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' }}
+        if: ${{ github.event_name == 'workflow_run' }}
         uses: actions/download-artifact@v5
         with:
           name: v8-telegram-payload
           path: data
-          run-id: \${{ github.event.workflow_run.id }}
-          github-token: \${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download latest successful V8 payload (5-minute fallback)
-        if: \${{ github.event_name == 'schedule' }}
-        env:
-          GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          mkdir -p data
-
-          RUN_ID="$(gh run list \
-            --repo "$GITHUB_REPOSITORY" \
-            --workflow "V8 Cap4 Dashboard" \
-            --status success \
-            --limit 1 \
-            --json databaseId \
-            --jq '.[0].databaseId')"
-
-          test -n "$RUN_ID"
-          echo "Latest successful V8 run: $RUN_ID"
-
-          gh run download "$RUN_ID" \
-            --repo "$GITHUB_REPOSITORY" \
-            --name v8-telegram-payload \
-            --dir data
-
-          test -f data/xauusd_v8_live.json
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Send Telegram test message
-        if: \${{ github.event_name == 'workflow_dispatch' }}
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         env:
-          TELEGRAM_BOT_TOKEN: \${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: \${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           set -euo pipefail
           python - <<'PY'
@@ -97,17 +69,17 @@ Auto Trade DISABLED"""
           PY
 
       - name: Send new V8 signal to Telegram
-        if: \${{ github.event_name == 'workflow_run' || github.event_name == 'schedule' }}
+        if: ${{ github.event_name == 'workflow_run' }}
         env:
-          TELEGRAM_BOT_TOKEN: \${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: \${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           set -euo pipefail
           test -f data/xauusd_v8_live.json
           python scripts/v8_telegram_notify.py
 
       - name: Persist Telegram notification state
-        if: \${{ github.event_name == 'workflow_run' || github.event_name == 'schedule' }}
+        if: ${{ github.event_name == 'workflow_run' }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
