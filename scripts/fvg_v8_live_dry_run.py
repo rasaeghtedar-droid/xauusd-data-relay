@@ -342,6 +342,8 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
                         "sl": round(sl, 3),
                         "tp": round(tp, 3),
                         "rr": round(rr_raw, 2),
+                        "zone_lo": f["lo"],
+                        "zone_hi": f["hi"],
                     }
                 )
 
