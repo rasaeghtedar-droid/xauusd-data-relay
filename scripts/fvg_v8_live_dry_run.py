@@ -253,10 +253,11 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
                     # the one-active-trade rule stays in force.
                     if not active.get("entry_activated", False):
                         continue
-            sl_hit = (c["low"] <= active["sl"]) if active["direction"] == "BUY" else (c["high"] >= active["sl"])
-            tp_hit = (c["high"] >= active["tp"]) if active["direction"] == "BUY" else (c["low"] <= active["tp"])
+            if active is not None:
+                sl_hit = (c["low"] <= active["sl"]) if active["direction"] == "BUY" else (c["high"] >= active["sl"])
+                tp_hit = (c["high"] >= active["tp"]) if active["direction"] == "BUY" else (c["low"] <= active["tp"])
 
-            if sl_hit or tp_hit:
+            if active is not None and (sl_hit or tp_hit):
                 if sl_hit and tp_hit:
                     outcome = "AMBIGUOUS"
                     result_icon = "⚠️"
