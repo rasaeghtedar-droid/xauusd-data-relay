@@ -206,6 +206,7 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
                         trade_history.append(dict(latest_result))
                     active = None
                     active_history = None
+                    continue
                 # Pending-entry validity window: 60 minutes from confirmation.
                 # If Entry is not touched inside this window, the setup expires
                 # and is no longer actionable.
