@@ -2,6 +2,12 @@ name: V8 Cap4 Technical Integrity Test
 
 on:
   workflow_dispatch:
+    inputs:
+      telegram_test:
+        description: "Send a Telegram notification test"
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -88,6 +94,41 @@ jobs:
 
           print("ORDER_EXECUTION_PATH=ABSENT")
           print("CHECK_METHOD=AST_EXCLUDING_COMMENTS_AND_DOCSTRINGS")
+          PY
+
+      - name: Send Telegram test notification
+        if: ${{ inputs.telegram_test == true }}
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import urllib.parse
+          import urllib.request
+
+          message = """🧪 XAUUSD V8 Cap4 — TELEGRAM TEST
+
+این پیام فقط برای تست Notification Bot است.
+موتور V8 در این تست اجرا نشده است.
+Auto Trade DISABLED"""
+
+          url = f"https://api.telegram.org/bot{os.environ['TELEGRAM_BOT_TOKEN']}/sendMessage"
+          body = urllib.parse.urlencode({
+              "chat_id": os.environ["TELEGRAM_CHAT_ID"],
+              "text": message,
+          }).encode()
+
+          req = urllib.request.Request(url, data=body, method="POST")
+          with urllib.request.urlopen(req, timeout=30) as response:
+              result = json.load(response)
+
+          if not result.get("ok"):
+              raise RuntimeError(result)
+
+          print("TELEGRAM_TEST=PASS")
           PY
 
       - name: Verify output contract
