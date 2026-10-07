@@ -23,18 +23,22 @@ jobs:
 
           python - <<'PY'
           import json
+          import urllib.parse
           import urllib.request
           from pathlib import Path
-          from datetime import datetime, timezone
+          from datetime import datetime, timezone, timedelta
 
           BASE_URL = "https://biquote.io/api/XAUUSD/ohlc"
           LIMITS = {"5m": 120, "15m": 40, "1h": 40}
 
-          def fetch(interval, limit):
-              url = f"{BASE_URL}?interval={interval}&limit={limit}"
+          def fetch_batch(interval, limit, to_time=None):
+              params = {"interval": interval, "limit": min(limit, 60)}
+              if to_time:
+                  params["to"] = to_time
+              url = f"{BASE_URL}?{urllib.parse.urlencode(params)}"
               req = urllib.request.Request(
                   url,
-                  headers={"User-Agent": "XAUUSD-Data-Relay/3.0", "Accept": "application/json"},
+                  headers={"User-Agent": "XAUUSD-Data-Relay/3.1", "Accept": "application/json"},
               )
               with urllib.request.urlopen(req, timeout=30) as response:
                   if response.status != 200:
@@ -43,6 +47,32 @@ jobs:
 
               bars = [b for b in payload.get("bars", []) if b.get("isOpen") is False]
               bars.sort(key=lambda b: b.get("openTime", ""))
+              return bars
+
+          def fetch_closed(interval, limit):
+              collected = {}
+              cursor = None
+
+              for _ in range(4):
+                  batch = fetch_batch(interval, limit, cursor)
+                  if not batch:
+                      break
+
+                  for bar in batch:
+                      if bar.get("openTime") and bar.get("isOpen") is False:
+                          collected[bar["openTime"]] = bar
+
+                  if len(collected) >= limit:
+                      break
+
+                  oldest = min(collected)
+                  oldest_dt = datetime.fromisoformat(oldest.replace("Z", "+00:00"))
+                  cursor = (oldest_dt - timedelta(milliseconds=1)).isoformat().replace("+00:00", "Z")
+
+                  if len(batch) < min(limit, 60):
+                      break
+
+              bars = sorted(collected.values(), key=lambda b: b.get("openTime", ""))
               if not bars:
                   raise RuntimeError(f"No closed bars returned for {interval}")
               return bars[-limit:]
@@ -56,7 +86,7 @@ jobs:
           }
 
           for interval, limit in LIMITS.items():
-              bars = fetch(interval, limit)
+              bars = fetch_closed(interval, limit)
               output["intervals"][interval] = {
                   "latestClosed": bars[-1],
                   "bars": bars
@@ -81,5 +111,5 @@ jobs:
             echo "No data changes."
             exit 0
           fi
-          git commit -m "Publish compact XAUUSD analysis data"
+          git commit -m "Extend XAUUSD relay with paginated closed M5 history"
           git push
