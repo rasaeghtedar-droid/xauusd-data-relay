@@ -29,7 +29,7 @@ jobs:
           from datetime import datetime, timezone, timedelta
 
           BASE_URL = "https://biquote.io/api/XAUUSD/ohlc"
-          LIMITS = {"5m": 120, "15m": 40, "1h": 40}
+          LIMITS = {"5m": 180, "15m": 40, "1h": 40}
 
           def fetch_batch(interval, limit, to_time=None):
               params = {"interval": interval, "limit": min(limit, 60)}
