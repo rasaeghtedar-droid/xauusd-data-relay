@@ -30,6 +30,14 @@ jobs:
           set -euo pipefail
           python scripts/fvg_v8_live_dry_run.py
 
+      - name: Upload V8 Telegram payload
+        uses: actions/upload-artifact@v4
+        with:
+          name: v8-telegram-payload
+          path: data/xauusd_v8_live.json
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Persist V8 signal history
         run: |
           set -euo pipefail
