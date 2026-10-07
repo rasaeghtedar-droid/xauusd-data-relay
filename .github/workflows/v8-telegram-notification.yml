@@ -4,6 +4,7 @@ on:
   workflow_run:
     workflows: ["V8 Cap4 Dashboard"]
     types: [completed]
+  workflow_dispatch:
 
 permissions:
   actions: read
@@ -15,7 +16,7 @@ concurrency:
 
 jobs:
   notify:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout V8 experiment branch
@@ -24,6 +25,7 @@ jobs:
           ref: experiment-fvg-setups
 
       - name: Download V8 payload from triggering run
+        if: ${{ github.event_name == 'workflow_run' }}
         uses: actions/download-artifact@v5
         with:
           name: v8-telegram-payload
@@ -31,7 +33,43 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Send Telegram test message
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import urllib.parse
+          import urllib.request
+
+          message = """🧪 XAUUSD V8 Cap4 — TELEGRAM TEST
+
+این پیام فقط برای تست Notification Bot است.
+موتور V8 در این تست اجرا نشده است.
+Auto Trade DISABLED"""
+
+          url = f"https://api.telegram.org/bot{os.environ['TELEGRAM_BOT_TOKEN']}/sendMessage"
+          body = urllib.parse.urlencode({
+              "chat_id": os.environ["TELEGRAM_CHAT_ID"],
+              "text": message,
+          }).encode()
+
+          req = urllib.request.Request(url, data=body, method="POST")
+          with urllib.request.urlopen(req, timeout=30) as response:
+              result = json.load(response)
+
+          if not result.get("ok"):
+              raise RuntimeError(result)
+
+          print("Telegram test message sent successfully.")
+          PY
+
       - name: Send new V8 signal to Telegram
+        if: ${{ github.event_name == 'workflow_run' }}
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -41,6 +79,7 @@ jobs:
           python scripts/v8_telegram_notify.py
 
       - name: Persist Telegram notification state
+        if: ${{ github.event_name == 'workflow_run' }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
