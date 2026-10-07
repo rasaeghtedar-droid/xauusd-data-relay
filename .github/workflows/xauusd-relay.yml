@@ -28,7 +28,7 @@ jobs:
           from datetime import datetime, timezone
 
           BASE_URL = "https://biquote.io/api/XAUUSD/ohlc"
-          LIMITS = {"5m": 60, "15m": 40, "1h": 40}
+          LIMITS = {"5m": 120, "15m": 40, "1h": 40}
 
           def fetch(interval, limit):
               url = f"{BASE_URL}?interval={interval}&limit={limit}"
