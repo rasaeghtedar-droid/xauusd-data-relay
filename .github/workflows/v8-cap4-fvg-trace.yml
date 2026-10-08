@@ -1,0 +1,142 @@
+name: V8 Cap4 FVG Trace Diagnostic
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout V8 audit code
+        uses: actions/checkout@v4
+        with:
+          ref: experiment-fvg-setups
+
+      - name: Fetch latest relay dataset
+        run: |
+          set -euo pipefail
+          curl -fsSL \
+            "https://raw.githubusercontent.com/rasaeghtedar-droid/xauusd-data-relay/main/data/xauusd_analysis.json" \
+            -o /tmp/xauusd_analysis.json
+
+      - name: Trace FVG lifecycle with locked V8 rules
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, bisect
+          from pathlib import Path
+          from datetime import timedelta
+
+          payload=json.loads(Path("/tmp/xauusd_analysis.json").read_text(encoding="utf-8"))
+          bars=payload["intervals"]["5m"]["bars"]
+          if len(bars)<150:
+              raise RuntimeError(f"Need 150 closed M5 bars; got {len(bars)}")
+          m5=bars[-150:]
+
+          import scripts.fvg_executable_audit_v8 as a
+          m15=a.agg(m5,15)
+          m15_times=[a.pt(x["openTime"]) for x in m15]
+
+          pending={}; mid_index={"BUY":[],"SELL":[]}; invalid_index={"BUY":[],"SELL":[]}
+          records=[]; active=None; confirmations=0; missed=0; invalidated=0
+          fid=0
+
+          def log_event(f,event,time,**extra):
+              f["events"].append({"event":event,"time":time,**extra})
+
+          for i in range(50,len(m5)):
+              c=m5[i]
+              had_active=active is not None
+
+              if active is not None:
+                  sl=(c["low"]<=active["sl"]) if active["direction"]=="BUY" else (c["high"]>=active["sl"])
+                  tp=(c["high"]>=active["tp"]) if active["direction"]=="BUY" else (c["low"]<=active["tp"])
+                  if sl or tp:
+                      active=None
+
+              # Exact locked invalidation order.
+              for d in ("BUY","SELL"):
+                  arr=invalid_index[d]
+                  if d=="BUY":
+                      cut=bisect.bisect_right(arr,(-c["low"],10**18))
+                  else:
+                      cut=bisect.bisect_right(arr,(c["high"],10**18))
+                  for _,xid in arr[:cut]:
+                      f=pending.pop(xid,None)
+                      if f is not None:
+                          invalidated+=1
+                          log_event(f,"INVALIDATED_BOUNDARY",c["openTime"],reason="full_fvg_boundary_breach")
+                  invalid_index[d]=arr[cut:]
+
+              # Exact locked confirmation logic.
+              confirmed=[]
+              for d in ("BUY","SELL"):
+                  arr=mid_index[d]
+                  lo=bisect.bisect_left(arr,(c["low"],-1))
+                  hi=bisect.bisect_right(arr,(c["high"],10**18))
+                  for _,xid in arr[lo:hi]:
+                      f=pending.get(xid)
+                      if f is None: continue
+                      if (d=="BUY" and c["low"]<=f["lo"]) or (d=="SELL" and c["high"]>=f["hi"]):
+                          pending.pop(xid,None); invalidated+=1
+                          log_event(f,"INVALIDATED_MIDPOINT_CANDLE",c["openTime"],reason="candle_reached_fvg_boundary")
+                          continue
+                      ok=(d=="BUY" and c["close"]>f["mid"] and c["close"]>c["open"]) or (d=="SELL" and c["close"]<f["mid"] and c["close"]<c["open"])
+                      if not ok:
+                          continue
+                      confirmations+=1
+                      entry=f["mid"]
+                      sl=f["lo"]-a.PAD if d=="BUY" else f["hi"]+a.PAD
+                      tp=a.target(d,entry,sl,f["ctx"])
+                      pending.pop(xid,None)
+                      if tp is None:
+                          log_event(f,"CONFIRMED_NO_TARGET",c["openTime"],entry=round(entry,3),sl=round(sl,3))
+                          continue
+                      rr_raw=(tp-entry)/(entry-sl) if d=="BUY" else (entry-tp)/(sl-entry)
+                      if rr_raw<2.0:
+                          log_event(f,"CONFIRMED_RR_LT_2",c["openTime"],entry=round(entry,3),sl=round(sl,3),tp=round(tp,3),rr=round(rr_raw,3))
+                          continue
+                      log_event(f,"CONFIRMED_EXECUTABLE",c["openTime"],entry=round(entry,3),sl=round(sl,3),tp=round(tp,3),rr=round(rr_raw,3))
+                      confirmed.append({**f,"confirmation_time":c["openTime"],"entry":round(entry,3),"sl":round(sl,3),"tp":round(tp,3),"rr":round(rr_raw,2)})
+
+              if had_active:
+                  missed+=len(confirmed)
+                  for f in confirmed: log_event(f,"MISSED_ACTIVE_TRADE",c["openTime"])
+              elif active is None and confirmed:
+                  confirmed.sort(key=lambda x:(x["formed_index"],i))
+                  s=confirmed[0]
+                  active=s
+                  missed+=max(0,len(confirmed)-1)
+
+              # Exact detection point: after processing current candle.
+              f=a.fvg_at(m5,i)
+              if f:
+                  t=a.pt(f["time"]); cutoff=t-timedelta(minutes=15)
+                  mi=bisect.bisect_right(m15_times,cutoff)
+                  ctx=m15[max(0,mi-a.LOOKBACK):mi]
+                  f={**f,"ctx":ctx,"formed_index":i,"id":fid,"events":[]}
+                  pending[fid]=f
+                  records.append(f)
+                  bisect.insort(mid_index[f["direction"]],(f["mid"],fid))
+                  if f["direction"]=="BUY": bisect.insort(invalid_index["BUY"],(-f["lo"],fid))
+                  else: bisect.insort(invalid_index["SELL"],(f["hi"],fid))
+                  log_event(f,"FORMED",f["time"],direction=f["direction"],lo=f["lo"],hi=f["hi"],mid=f["mid"],size=f["size"])
+                  fid+=1
+
+          out={
+            "source":"Biquote relay: main/data/xauusd_analysis.json",
+            "data_m5":150,
+            "warmup":50,
+            "evaluation":100,
+            "confirmations":confirmations,
+            "invalidated":invalidated,
+            "missed_or_competing":missed,
+            "fvg_count":len(records),
+            "fvgs":[{k:v for k,v in f.items() if k in ("id","direction","time","lo","hi","mid","size","formed_index","events")} for f in records]
+          }
+          Path("/tmp/v8_fvg_trace.json").write_text(json.dumps(out,indent=2,ensure_ascii=False),encoding="utf-8")
+          print(json.dumps(out,indent=2,ensure_ascii=False))
+          PY
