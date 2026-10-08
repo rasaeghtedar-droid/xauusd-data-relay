@@ -31,7 +31,7 @@ jobs:
           from scripts.fvg_only_gold_hunter_backtest import swings,equals,uniq,LOOKBACK,PAD
 
           p=json.loads(Path("/tmp/xauusd_analysis.json").read_text())
-          m5=p["intervals"]["5m"]["bars"][-150:]
+          m5=p["intervals"]["5m"]["bars"][-180:]
           m15=a.agg(m5,15)
           mt=[a.pt(x["openTime"]) for x in m15]
 
