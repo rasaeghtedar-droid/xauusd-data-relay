@@ -1,0 +1,194 @@
+name: V8 Cap4 Target Compare
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout V8 audit code
+        uses: actions/checkout@v4
+        with:
+          ref: experiment-fvg-setups
+
+      - name: Fetch latest relay dataset
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://raw.githubusercontent.com/rasaeghtedar-droid/xauusd-data-relay/main/data/xauusd_analysis.json" -o /tmp/xauusd_analysis.json
+
+      - name: Compare Cap4 vs structural target on same confirmations
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,bisect
+          from pathlib import Path
+          from datetime import timedelta
+          import scripts.fvg_executable_audit_v8 as a
+          from scripts.fvg_only_gold_hunter_backtest import swings,equals,uniq,LOOKBACK,PAD
+
+          p=json.loads(Path("/tmp/xauusd_analysis.json").read_text())
+          m5=p["intervals"]["5m"]["bars"][-150:]
+          m15=a.agg(m5,15)
+          mt=[a.pt(x["openTime"]) for x in m15]
+
+          pending={}
+          mids={"BUY":[],"SELL":[]}
+          inv={"BUY":[],"SELL":[]}
+          confirmations=[]
+
+          def candidates(d,entry,sl,ctx):
+              levels=uniq(swings(ctx,"high")+equals(ctx,"high")) if d=="BUY" else uniq(swings(ctx,"low")+equals(ctx,"low"))
+              vals=[]
+              for x in levels:
+                  if d=="BUY" and x>entry:
+                      vals.append((x,(x-entry)/(entry-sl)))
+                  elif d=="SELL" and x<entry:
+                      vals.append((x,(entry-x)/(sl-entry)))
+              return sorted(vals,key=lambda z:z[0],reverse=(d=="SELL"))
+
+          for i in range(50,len(m5)):
+              c=m5[i]
+
+              for d in ("BUY","SELL"):
+                  arr=inv[d]
+                  if d=="BUY":
+                      cut=bisect.bisect_right(arr,(-c["low"],10**18))
+                  else:
+                      cut=bisect.bisect_right(arr,(c["high"],10**18))
+                  for _,fid in arr[:cut]:
+                      pending.pop(fid,None)
+                  inv[d]=arr[cut:]
+
+              for d in ("BUY","SELL"):
+                  arr=mids[d]
+                  lo=bisect.bisect_left(arr,(c["low"],-1))
+                  hi=bisect.bisect_right(arr,(c["high"],10**18))
+                  for _,fid in arr[lo:hi]:
+                      f=pending.get(fid)
+                      if not f:
+                          continue
+                      if (d=="BUY" and c["low"]<=f["lo"]) or (d=="SELL" and c["high"]>=f["hi"]):
+                          pending.pop(fid,None)
+                          continue
+                      ok=(d=="BUY" and c["close"]>f["mid"] and c["close"]>c["open"]) or (d=="SELL" and c["close"]<f["mid"] and c["close"]<c["open"])
+                      if not ok:
+                          continue
+
+                      entry=f["mid"]
+                      sl=f["lo"]-PAD if d=="BUY" else f["hi"]+PAD
+                      structural=a.structural_target(d,entry,sl,f["ctx"])
+                      cap4=a.target(d,entry,sl,f["ctx"])
+                      confirmations.append({
+                          "direction":d,
+                          "formation_time":f["time"],
+                          "confirmation_time":c["openTime"],
+                          "entry":round(entry,3),
+                          "sl":round(sl,3),
+                          "structural_target":None if structural is None else round(structural,3),
+                          "cap4_target":None if cap4 is None else round(cap4,3),
+                          "confirmation_index":i
+                      })
+                      pending.pop(fid,None)
+
+              f=a.fvg_at(m5,i)
+              if f:
+                  t=a.pt(f["time"])
+                  cutoff=t-timedelta(minutes=15)
+                  mi=bisect.bisect_right(mt,cutoff)
+                  ctx=m15[max(0,mi-LOOKBACK):mi]
+                  fid=len(pending)+i+1
+                  pending[fid]={**f,"ctx":ctx}
+                  bisect.insort(mids[f["direction"]],(f["mid"],fid))
+                  if f["direction"]=="BUY":
+                      bisect.insort(inv["BUY"],(-f["lo"],fid))
+                  else:
+                      bisect.insort(inv["SELL"],(f["hi"],fid))
+
+          confirmations.sort(key=lambda x:x["confirmation_index"])
+
+          def replay(policy):
+              trades=[]
+              active=None
+              ignored=[]
+              for conf in confirmations:
+                  if conf[policy+"_target"] is None:
+                      ignored.append({**conf,"reason":"NO_TARGET"})
+                      continue
+                  if active is not None:
+                      ignored.append({**conf,"reason":"BLOCKED_BY_ACTIVE_TRADE","active_confirmation":active["confirmation_time"]})
+                      continue
+
+                  target=conf[policy+"_target"]
+                  d=conf["direction"]
+                  entry=conf["entry"]
+                  sl=conf["sl"]
+                  start=conf["confirmation_index"]+1
+                  outcome="OPEN_AT_DATA_END"
+                  exit_index=None
+                  exit_time=None
+
+                  for j in range(start,len(m5)):
+                      b=m5[j]
+                      hit_sl=(b["low"]<=sl) if d=="BUY" else (b["high"]>=sl)
+                      hit_tp=(b["high"]>=target) if d=="BUY" else (b["low"]<=target)
+                      if hit_sl and hit_tp:
+                          outcome="AMBIGUOUS"
+                          exit_index=j
+                          exit_time=b["openTime"]
+                          break
+                      if hit_sl:
+                          outcome="SL"
+                          exit_index=j
+                          exit_time=b["openTime"]
+                          break
+                      if hit_tp:
+                          outcome="TP"
+                          exit_index=j
+                          exit_time=b["openTime"]
+                          break
+
+                  rr=(target-entry)/abs(entry-sl)
+                  r=rr if outcome=="TP" else (-1.0 if outcome=="SL" else 0.0)
+                  trade={**conf,"target":target,"rr":round(rr,3),"outcome":outcome,"r":round(r,3),"exit_index":exit_index,"exit_time":exit_time}
+                  trades.append(trade)
+                  if outcome=="OPEN_AT_DATA_END":
+                      active=trade
+                  # If resolved, continue. If open, all later confirmations are blocked.
+              return trades,ignored
+
+          cap4_trades,cap4_ignored=replay("cap4")
+          structural_trades,structural_ignored=replay("structural")
+
+          def summary(trades,ignored):
+              return {
+                  "signals_taken":len(trades),
+                  "tp":sum(x["outcome"]=="TP" for x in trades),
+                  "sl":sum(x["outcome"]=="SL" for x in trades),
+                  "ambiguous":sum(x["outcome"]=="AMBIGUOUS" for x in trades),
+                  "open_at_data_end":sum(x["outcome"]=="OPEN_AT_DATA_END" for x in trades),
+                  "net_r":round(sum(x["r"] for x in trades),3),
+                  "blocked_or_skipped":len(ignored)
+              }
+
+          out={
+              "research_only":True,
+              "engine":"FVG_EXECUTABLE_AUDIT_V8_CAP4",
+              "data_m5":len(m5),
+              "warmup":50,
+              "evaluation":max(0,len(m5)-50),
+              "confirmations":confirmations,
+              "cap4":{"summary":summary(cap4_trades,cap4_ignored),"trades":cap4_trades,"ignored":cap4_ignored},
+              "structural":{"summary":summary(structural_trades,structural_ignored),"trades":structural_trades,"ignored":structural_ignored},
+              "interpretation":{
+                  "same_entries":True,
+                  "same_fvg_rules":True,
+                  "same_one_active_trade_rule":True,
+                  "only_target_policy_differs":True
+              }
+          }
+          print(json.dumps(out,indent=2,ensure_ascii=False))
+          PY
