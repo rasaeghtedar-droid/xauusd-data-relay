@@ -1,0 +1,110 @@
+name: V8 Cap4 Target Audit
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout V8 audit code
+        uses: actions/checkout@v4
+        with:
+          ref: experiment-fvg-setups
+
+      - name: Fetch latest relay dataset
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://raw.githubusercontent.com/rasaeghtedar-droid/xauusd-data-relay/main/data/xauusd_analysis.json" -o /tmp/xauusd_analysis.json
+
+      - name: Audit structural target candidates
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,bisect
+          from pathlib import Path
+          from datetime import timedelta
+          import scripts.fvg_executable_audit_v8 as a
+          from scripts.fvg_only_gold_hunter_backtest import swings,equals,uniq,LOOKBACK,PAD
+
+          p=json.loads(Path("/tmp/xauusd_analysis.json").read_text())
+          m5=p["intervals"]["5m"]["bars"][-150:]
+          m15=a.agg(m5,15)
+          mt=[a.pt(x["openTime"]) for x in m15]
+          pending={}; mids={"BUY":[],"SELL":[]}; inv={"BUY":[],"SELL":[]}; confirmations=[]
+
+          def candidates(d,entry,sl,ctx):
+              levels=uniq(swings(ctx,"high")+equals(ctx,"high")) if d=="BUY" else uniq(swings(ctx,"low")+equals(ctx,"low"))
+              vals=[]
+              for x in levels:
+                  if d=="BUY" and x>entry:
+                      rr=(x-entry)/(entry-sl)
+                      vals.append((x,rr))
+                  elif d=="SELL" and x<entry:
+                      rr=(entry-x)/(sl-entry)
+                      vals.append((x,rr))
+              return sorted(vals,key=lambda z:z[0],reverse=(d=="SELL"))
+
+          for i in range(50,len(m5)):
+              c=m5[i]
+              for d in ("BUY","SELL"):
+                  arr=inv[d]
+                  cut=bisect.bisect_right(arr,(-c["low"],10**18)) if d=="BUY" else bisect.bisect_right(arr,(c["high"],10**18))
+                  for _,fid in arr[:cut]: pending.pop(fid,None)
+                  inv[d]=arr[cut:]
+
+              for d in ("BUY","SELL"):
+                  arr=mids[d]
+                  lo=bisect.bisect_left(arr,(c["low"],-1)); hi=bisect.bisect_right(arr,(c["high"],10**18))
+                  for _,fid in arr[lo:hi]:
+                      f=pending.get(fid)
+                      if not f: continue
+                      if (d=="BUY" and c["low"]<=f["lo"]) or (d=="SELL" and c["high"]>=f["hi"]):
+                          pending.pop(fid,None); continue
+                      ok=(d=="BUY" and c["close"]>f["mid"] and c["close"]>c["open"]) or (d=="SELL" and c["close"]<f["mid"] and c["close"]<c["open"])
+                      if not ok: continue
+                      entry=f["mid"]; sl=f["lo"]-PAD if d=="BUY" else f["hi"]+PAD
+                      cs=candidates(d,entry,sl,f["ctx"])
+                      structural=a.structural_target(d,entry,sl,f["ctx"])
+                      capped=a.target(d,entry,sl,f["ctx"])
+                      rec={"direction":d,"formation_time":f["time"],"confirmation_time":c["openTime"],"entry":round(entry,3),"sl":round(sl,3),
+                           "structural_target":None if structural is None else round(structural,3),
+                           "cap4_target":None if capped is None else round(capped,3),
+                           "candidate_levels":[{"level":round(x,3),"rr":round(rr,3)} for x,rr in cs[:8]]}
+                      if capped is not None:
+                          rec["locked_status"]="EXECUTABLE"
+                      else:
+                          rec["locked_status"]="NO_TARGET"
+                          # Evaluate nearest structural levels from the pre-FVG M15 context only.
+                          outcomes=[]
+                          for level,rr in cs[:8]:
+                              if rr<1.0: continue
+                              outcome=None; exit_time=None
+                              for j in range(i+1,len(m5)):
+                                  b=m5[j]
+                                  hit_sl=(b["low"]<=sl) if d=="BUY" else (b["high"]>=sl)
+                                  hit_tp=(b["high"]>=level) if d=="BUY" else (b["low"]<=level)
+                                  if hit_sl and hit_tp: outcome="AMBIGUOUS"; exit_time=b["openTime"]; break
+                                  if hit_sl: outcome="SL"; exit_time=b["openTime"]; break
+                                  if hit_tp: outcome="TP"; exit_time=b["openTime"]; break
+                              outcomes.append({"level":round(level,3),"rr":round(rr,3),"outcome":outcome,"exit_time":exit_time})
+                          rec["hypothetical_outcomes"]=outcomes
+                      confirmations.append(rec)
+                      pending.pop(fid,None)
+
+              f=a.fvg_at(m5,i)
+              if f:
+                  t=a.pt(f["time"]); cutoff=t-timedelta(minutes=15); mi=bisect.bisect_right(mt,cutoff); ctx=m15[max(0,mi-LOOKBACK):mi]
+                  fid=len(pending)+i+1
+                  pending[fid]={**f,"ctx":ctx}
+                  bisect.insort(mids[f["direction"]],(f["mid"],fid))
+                  if f["direction"]=="BUY": bisect.insort(inv["BUY"],(-f["lo"],fid))
+                  else: bisect.insort(inv["SELL"],(f["hi"],fid))
+
+          out={"research_only":True,"data_m5":150,"warmup":50,"evaluation":100,"confirmations":confirmations,
+               "no_target":[x for x in confirmations if x["locked_status"]=="NO_TARGET"]}
+          print(json.dumps(out,indent=2,ensure_ascii=False))
+          PY
