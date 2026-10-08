@@ -117,13 +117,13 @@ jobs:
                   t=a.pt(f["time"]); cutoff=t-timedelta(minutes=15)
                   mi=bisect.bisect_right(m15_times,cutoff)
                   ctx=m15[max(0,mi-a.LOOKBACK):mi]
-                  f={**f,"ctx":ctx,"formed_index":i,"id":fid,"events":[],"size":f.get("size",f["hi"]-f["lo"])}
+                  f={**f,"ctx":ctx,"formed_index":i,"id":fid,"events":[]}
                   pending[fid]=f
                   records.append(f)
                   bisect.insort(mid_index[f["direction"]],(f["mid"],fid))
                   if f["direction"]=="BUY": bisect.insort(invalid_index["BUY"],(-f["lo"],fid))
                   else: bisect.insort(invalid_index["SELL"],(f["hi"],fid))
-                  log_event(f,"FORMED",f["time"],direction=f["direction"],lo=f["lo"],hi=f["hi"],mid=f["mid"],size=f["size"])
+                  log_event(f,"FORMED",f["time"],direction=f["direction"],lo=f["lo"],hi=f["hi"],mid=f["mid"])
                   fid+=1
 
           out={
@@ -135,7 +135,7 @@ jobs:
             "invalidated":invalidated,
             "missed_or_competing":missed,
             "fvg_count":len(records),
-            "fvgs":[{k:v for k,v in f.items() if k in ("id","direction","time","lo","hi","mid","size","formed_index","events")} for f in records]
+            "fvgs":[{k:v for k,v in f.items() if k in ("id","direction","time","lo","hi","mid" ,"formed_index","events")} for f in records]
           }
           Path("/tmp/v8_fvg_trace.json").write_text(json.dumps(out,indent=2,ensure_ascii=False),encoding="utf-8")
           print(json.dumps(out,indent=2,ensure_ascii=False))
