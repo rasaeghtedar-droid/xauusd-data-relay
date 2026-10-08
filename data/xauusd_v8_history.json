@@ -12,7 +12,8 @@
     "result_r": null,
     "activation_time": null,
     "pending_expiry_minutes": 60,
-    "exit_time": null
+    "exit_time": null,
+    "pending_invalidation_rule": "closed M5 candle beyond original FVG boundary"
   },
   {
     "signal_key": "BUY|2026-10-08T07:05:00Z",
