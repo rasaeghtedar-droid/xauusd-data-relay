@@ -117,7 +117,7 @@ jobs:
                   t=a.pt(f["time"]); cutoff=t-timedelta(minutes=15)
                   mi=bisect.bisect_right(m15_times,cutoff)
                   ctx=m15[max(0,mi-a.LOOKBACK):mi]
-                  f={**f,"ctx":ctx,"formed_index":i,"id":fid,"events":[]}
+                  f={**f,"ctx":ctx,"formed_index":i,"id":fid,"events":[],"size":f.get("size",f["hi"]-f["lo"])}
                   pending[fid]=f
                   records.append(f)
                   bisect.insort(mid_index[f["direction"]],(f["mid"],fid))
