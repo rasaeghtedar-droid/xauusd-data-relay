@@ -1,5 +1,20 @@
 [
   {
+    "signal_key": "BUY|2026-10-08T17:50:00Z",
+    "direction": "BUY",
+    "confirmation_time": "2026-10-08T17:50:00Z",
+    "formation_time": "2026-10-08T17:05:00Z",
+    "entry": 4127.228,
+    "sl": 4126.001,
+    "tp": 4131.496,
+    "rr": 3.48,
+    "status": "PENDING",
+    "result_r": null,
+    "activation_time": null,
+    "pending_expiry_minutes": 60,
+    "exit_time": null
+  },
+  {
     "signal_key": "BUY|2026-10-08T13:20:00Z",
     "direction": "BUY",
     "confirmation_time": "2026-10-08T13:20:00Z",
@@ -94,15 +109,15 @@
     "formation_time": "2026-10-07T22:10:00Z",
     "entry": 4111.781,
     "sl": 4112.943,
-    "tp": 4107.477,
-    "rr": 3.7,
-    "status": "SL",
-    "result_r": -1.0,
+    "tp": 4108.354,
+    "rr": 2.95,
+    "status": "TP",
+    "result_r": 2.95,
     "activation_time": "2026-10-07T23:30:00Z",
     "pending_expiry_minutes": 60,
-    "exit_time": "2026-10-07T23:35:00Z",
+    "exit_time": "2026-10-07T23:30:00Z",
     "pending_invalidation_rule": "closed M5 candle beyond original FVG boundary",
-    "icon": "❌"
+    "icon": "✅"
   },
   {
     "signal_key": "BUY|2026-10-07T20:35:00Z",
