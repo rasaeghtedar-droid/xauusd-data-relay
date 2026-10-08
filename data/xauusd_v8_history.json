@@ -8,12 +8,13 @@
     "sl": 4126.001,
     "tp": 4131.496,
     "rr": 3.48,
-    "status": "ACTIVE",
-    "result_r": null,
+    "status": "SL",
+    "result_r": -1.0,
     "activation_time": "2026-10-08T18:10:00Z",
     "pending_expiry_minutes": 60,
-    "exit_time": null,
-    "pending_invalidation_rule": "closed M5 candle beyond original FVG boundary"
+    "exit_time": "2026-10-08T18:20:00Z",
+    "pending_invalidation_rule": "closed M5 candle beyond original FVG boundary",
+    "icon": "❌"
   },
   {
     "signal_key": "BUY|2026-10-08T13:20:00Z",
@@ -39,8 +40,8 @@
     "formation_time": "2026-10-08T00:50:00Z",
     "entry": 4112.295,
     "sl": 4108.881,
-    "tp": 4125.951,
-    "rr": 4.0,
+    "tp": 4119.768,
+    "rr": 2.19,
     "status": "EXPIRED",
     "result_r": 0.0,
     "activation_time": null,
