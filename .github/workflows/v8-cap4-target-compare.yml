@@ -40,16 +40,6 @@ jobs:
           inv={"BUY":[],"SELL":[]}
           confirmations=[]
 
-          def candidates(d,entry,sl,ctx):
-              levels=uniq(swings(ctx,"high")+equals(ctx,"high")) if d=="BUY" else uniq(swings(ctx,"low")+equals(ctx,"low"))
-              vals=[]
-              for x in levels:
-                  if d=="BUY" and x>entry:
-                      vals.append((x,(x-entry)/(entry-sl)))
-                  elif d=="SELL" and x<entry:
-                      vals.append((x,(entry-x)/(sl-entry)))
-              return sorted(vals,key=lambda z:z[0],reverse=(d=="SELL"))
-
           for i in range(50,len(m5)):
               c=m5[i]
 
@@ -157,7 +147,6 @@ jobs:
                   trades.append(trade)
                   if outcome=="OPEN_AT_DATA_END":
                       active=trade
-                  # If resolved, continue. If open, all later confirmations are blocked.
               return trades,ignored
 
           cap4_trades,cap4_ignored=replay("cap4")
@@ -174,13 +163,47 @@ jobs:
                   "blocked_or_skipped":len(ignored)
               }
 
+          capped_confirmations=[
+              x for x in confirmations
+              if x["structural_target"] is not None
+              and x["cap4_target"] is not None
+              and x["cap4_target"] != x["structural_target"]
+          ]
+
+          capped_confirmations_detail=[]
+          for x in capped_confirmations:
+              risk=abs(x["entry"]-x["sl"])
+              structural_rr=(
+                  ((x["structural_target"]-x["entry"])/risk)
+                  if x["direction"]=="BUY"
+                  else ((x["entry"]-x["structural_target"])/risk)
+              )
+              cap4_rr=(
+                  ((x["cap4_target"]-x["entry"])/risk)
+                  if x["direction"]=="BUY"
+                  else ((x["entry"]-x["cap4_target"])/risk)
+              )
+              capped_confirmations_detail.append({
+                  **x,
+                  "structural_rr":round(structural_rr,3),
+                  "cap4_rr":round(cap4_rr,3)
+              })
+
           out={
               "research_only":True,
               "engine":"FVG_EXECUTABLE_AUDIT_V8_CAP4",
+              "source":p.get("source"),
+              "relay_fetched_at":p.get("fetchedAt"),
+              "latest_m5":p["intervals"]["5m"]["latestClosed"].get("openTime"),
               "data_m5":len(m5),
               "warmup":50,
               "evaluation":max(0,len(m5)-50),
               "confirmations":confirmations,
+              "cap4_effect": {
+                  "capped_confirmations":len(capped_confirmations),
+                  "capped_confirmations_detail":capped_confirmations_detail,
+                  "meaning":"Cap4 changed the target only where structural RR exceeded 4R."
+              },
               "cap4":{"summary":summary(cap4_trades,cap4_ignored),"trades":cap4_trades,"ignored":cap4_ignored},
               "structural":{"summary":summary(structural_trades,structural_ignored),"trades":structural_trades,"ignored":structural_ignored},
               "interpretation":{
