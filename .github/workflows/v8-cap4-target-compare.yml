@@ -31,7 +31,7 @@ jobs:
           from scripts.fvg_only_gold_hunter_backtest import swings,equals,uniq,LOOKBACK,PAD
 
           p=json.loads(Path("/tmp/xauusd_analysis.json").read_text())
-          m5=p["intervals"]["5m"]["bars"][-180:]
+          m5=p["intervals"]["5m"]["bars"][-1000:]
           m15=a.agg(m5,15)
           mt=[a.pt(x["openTime"]) for x in m15]
 
@@ -151,7 +151,7 @@ jobs:
                           exit_time=b["openTime"]
                           break
 
-                  rr=(target-entry)/abs(entry-sl)
+                  rr=((target-entry) if d=="BUY" else (entry-target))/abs(entry-sl)
                   r=rr if outcome=="TP" else (-1.0 if outcome=="SL" else 0.0)
                   trade={**conf,"target":target,"rr":round(rr,3),"outcome":outcome,"r":round(r,3),"exit_index":exit_index,"exit_time":exit_time}
                   trades.append(trade)
