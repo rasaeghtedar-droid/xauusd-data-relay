@@ -38,6 +38,27 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Send new V8 signal to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          set -euo pipefail
+          python scripts/v8_telegram_notify.py
+
+      - name: Persist Telegram notification state
+        run: |
+          set -euo pipefail
+          if [ -f data/xauusd_v8_telegram_state.json ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/xauusd_v8_telegram_state.json
+            if ! git diff --cached --quiet; then
+              git commit -m "Persist V8 Telegram notification state"
+              git push origin HEAD:experiment-fvg-setups
+            fi
+          fi
+
       - name: Persist V8 signal history
         run: |
           set -euo pipefail
