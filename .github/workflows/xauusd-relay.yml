@@ -69,8 +69,9 @@ jobs:
                   oldest_dt = datetime.fromisoformat(oldest.replace("Z", "+00:00"))
                   cursor = (oldest_dt - timedelta(milliseconds=1)).isoformat().replace("+00:00", "Z")
 
-                  if len(batch) < min(limit, 60):
-                      break
+                  # Continue pagination even when the provider returns a short page.
+                  # The next cursor moves before the oldest collected candle; the
+                  # loop also stops on an empty page or after 20 requests.
 
               bars = sorted(collected.values(), key=lambda b: b.get("openTime", ""))
               if not bars:
