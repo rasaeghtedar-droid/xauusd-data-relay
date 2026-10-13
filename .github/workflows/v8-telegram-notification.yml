@@ -1,9 +1,6 @@
 name: V8 Telegram Notification
 
 on:
-  workflow_run:
-    workflows: ["V8 Cap4 Dashboard"]
-    types: [completed]
   workflow_dispatch:
 
 permissions:
