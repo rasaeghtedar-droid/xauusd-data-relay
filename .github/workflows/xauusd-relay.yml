@@ -86,8 +86,33 @@ jobs:
               "intervals": {}
           }
 
+          # Preserve previously collected M5 history because the provider returns
+          # a rolling window of roughly 288 candles. Merge by openTime, then keep
+          # the newest 1000 closed candles. Other intervals retain their existing
+          # fetch behavior.
+          existing_path = Path("data/xauusd_analysis.json")
+          previous = {}
+          if existing_path.exists():
+              try:
+                  previous = json.loads(existing_path.read_text(encoding="utf-8"))
+              except (json.JSONDecodeError, OSError):
+                  previous = {}
+
           for interval, limit in LIMITS.items():
-              bars = fetch_closed(interval, limit)
+              fetched = fetch_closed(interval, limit)
+              if interval == "5m":
+                  old_bars = (
+                      previous.get("intervals", {}).get("5m", {}).get("bars", [])
+                      if isinstance(previous, dict) else []
+                  )
+                  merged = {}
+                  for bar in old_bars + fetched:
+                      if bar.get("openTime") and bar.get("isOpen") is False:
+                          merged[bar["openTime"]] = bar
+                  bars = sorted(merged.values(), key=lambda b: b["openTime"])[-limit:]
+              else:
+                  bars = fetched
+
               output["intervals"][interval] = {
                   "latestClosed": bars[-1],
                   "bars": bars
