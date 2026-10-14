@@ -1,0 +1,39 @@
+{
+  "checked_at": "2026-10-14T03:26:25.422849Z",
+  "data_fetched_at": "2026-10-14T03:26:23.909027Z",
+  "latest_m5": "2026-10-14T03:20:00Z",
+  "latest_m5_age_minutes": 6.4,
+  "rule": {
+    "direction": "SELL",
+    "session_utc": "00:00-06:59",
+    "minimum_rr": 2.0,
+    "maximum_rr": 2.5
+  },
+  "status": "NEW SIGNAL",
+  "engine": {
+    "signal": "SELL",
+    "entry": 4166.541,
+    "sl": 4170.387,
+    "tp": 4157.584,
+    "rr": 2.33,
+    "liquidity": "buy-side sweep",
+    "liquidity_level": 4168.406,
+    "confirmation": "bearish continuation",
+    "h1_bias": "BULLISH",
+    "candle_time": "2026-10-14T03:20:00Z",
+    "status": "SETUP FOUND"
+  },
+  "signal": {
+    "signal": "SELL",
+    "entry": 4166.541,
+    "sl": 4170.387,
+    "tp": 4157.584,
+    "rr": 2.33,
+    "liquidity": "buy-side sweep",
+    "liquidity_level": 4168.406,
+    "confirmation": "bearish continuation",
+    "h1_bias": "BULLISH",
+    "candle_time": "2026-10-14T03:20:00Z",
+    "status": "SETUP FOUND"
+  }
+}
