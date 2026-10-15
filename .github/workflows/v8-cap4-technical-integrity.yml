@@ -111,9 +111,9 @@ jobs:
 
           message = """🧪 XAUUSD V8 Cap4 — TELEGRAM TEST
 
-این پیام فقط برای تست Notification Bot است.
-موتور V8 در این تست اجرا نشده است.
-Auto Trade DISABLED"""
+          این پیام فقط برای تست Notification Bot است.
+          موتور V8 در این تست اجرا نشده است.
+          Auto Trade DISABLED"""
 
           url = f"https://api.telegram.org/bot{os.environ['TELEGRAM_BOT_TOKEN']}/sendMessage"
           body = urllib.parse.urlencode({
