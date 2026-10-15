@@ -31,6 +31,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ANALYSIS_PATH = ROOT / "data" / "xauusd_analysis.json"
 LIVE_PATH = ROOT / "data" / "xauusd_v8_live.json"
 HISTORY_PATH = ROOT / "data" / "xauusd_v8_history.json"
+ACTIVE_SIGNAL_PATH = ROOT / "data" / "xauusd_v8_active_signal.json"
 
 BASE_URL = "https://biquote.io/api/XAUUSD/ohlc"
 M5_LIMIT = 1000
@@ -590,12 +591,44 @@ def main() -> None:
         # Prevent the same confirmation candle from being emitted repeatedly.
         # A later run may still reconstruct the same trade from replay, but only
         # the first observation of the CURRENT latest M5 candle is actionable.
+        # A separate state file survives clean GitHub Actions checkouts.
         previous = None
-        if LIVE_PATH.exists():
+        if ACTIVE_SIGNAL_PATH.exists():
             try:
-                previous = json.loads(LIVE_PATH.read_text(encoding="utf-8"))
+                previous = json.loads(ACTIVE_SIGNAL_PATH.read_text(encoding="utf-8"))
             except (OSError, json.JSONDecodeError):
                 previous = None
+
+        # Bootstrap once from existing history if no dedicated state exists.
+        if previous is None:
+            now_utc = datetime.now(timezone.utc)
+            for item in history:
+                trade_status = item.get("status")
+                confirmation = item.get("confirmation_time")
+                if trade_status not in ("PENDING", "ACTIVE") or not confirmation:
+                    continue
+                if trade_status == "PENDING":
+                    try:
+                        confirmed_at = datetime.fromisoformat(confirmation.replace("Z", "+00:00"))
+                    except (TypeError, ValueError):
+                        continue
+                    if (now_utc - confirmed_at).total_seconds() > PENDING_ENTRY_MAX_MINUTES * 60:
+                        continue
+                previous = {
+                    "status": "SIGNAL",
+                    "signal_key": item.get("signal_key"),
+                    "signal": {
+                        "direction": item.get("direction"),
+                        "confirmation_time": confirmation,
+                        "formation_time": item.get("formation_time"),
+                        "entry": item.get("entry"),
+                        "sl": item.get("sl"),
+                        "tp": item.get("tp"),
+                        "rr": item.get("rr"),
+                        "activation_time": item.get("activation_time"),
+                    },
+                }
+                break
 
         signal_key = None
         if signal:
@@ -616,13 +649,15 @@ def main() -> None:
         retained_signal = None
         if not signal and previous:
             prev_signal = previous.get("signal")
-            prev_result = previous.get("result")
-            prev_status = previous.get("status")
-            if prev_status == "SIGNAL" and prev_signal and not prev_result:
+            prev_key = previous.get("signal_key")
+            prev_history = history_by_key.get(str(prev_key)) if prev_key else None
+            prev_trade_status = (prev_history or {}).get("status")
+            # Never resurrect invalidated, expired, TP, or SL signals.
+            if prev_signal and prev_trade_status in ("PENDING", "ACTIVE"):
                 retained_signal = prev_signal
                 signal = retained_signal
-                signal_key = previous.get("signal_key")
-                reason = "active V8 signal retained; waiting for TP/SL or a new setup"
+                signal_key = prev_key
+                reason = "active V8 signal retained; waiting for entry or resolution"
 
         payload = {
             "status": "SIGNAL" if (is_new_signal or retained_signal) else "NO TRADE",
@@ -646,6 +681,25 @@ def main() -> None:
 
     LIVE_PATH.parent.mkdir(parents=True, exist_ok=True)
     LIVE_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # Keep a compact, stable state across clean GitHub Actions checkouts.
+    if payload.get("status") == "SIGNAL" and payload.get("signal") and payload.get("signal_key"):
+        active_state = {
+            "status": "SIGNAL",
+            "signal_key": payload["signal_key"],
+            "signal": payload["signal"],
+        }
+    elif payload.get("status") == "NO TRADE":
+        active_state = {"status": "NO TRADE", "signal_key": None, "signal": None}
+    else:
+        # On stale/unavailable data, leave the last state untouched.
+        active_state = None
+
+    if active_state is not None:
+        ACTIVE_SIGNAL_PATH.write_text(
+            json.dumps(active_state, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
     merge_into_analysis(payload)
     print(json.dumps(payload, ensure_ascii=False, indent=2))
 
