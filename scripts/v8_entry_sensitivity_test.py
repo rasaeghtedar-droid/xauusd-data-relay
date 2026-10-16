@@ -75,8 +75,8 @@ def summarize(trades: list[dict]) -> dict:
 
 
 def main():
-    if not SOURCE:
-        raise RuntimeError("COMBINED_SOURCE_URL is required")
+    if not SOURCE and not Path(os.getenv("V8_SENSITIVITY_DATA_JSON", "data/xauusd_analysis.json")).exists():
+        raise RuntimeError("Either local relay JSON or COMBINED_SOURCE_URL is required")
     local_json = os.getenv("V8_SENSITIVITY_DATA_JSON", "data/xauusd_analysis.json")
     local_path = Path(local_json)
     if local_path.exists():
