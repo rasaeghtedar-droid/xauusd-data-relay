@@ -9,7 +9,13 @@ from __future__ import annotations
 import inspect
 import json
 import os
+import sys
 from pathlib import Path
+
+# GitHub Actions executes this file by path, so ensure repository root is importable.
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from scripts import fvg_v8_live_dry_run as live
 from scripts.fvg_only_gold_hunter_backtest import load, pt
