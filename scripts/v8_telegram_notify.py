@@ -31,8 +31,12 @@ message = (f"🥇 XAUUSD V8 Cap4 — {signal['direction']} SIGNAL\n\n"
            f"⏰ {iran} به وقت ایران 🇮🇷\n\n"
            "⚠️ Signal-Only — Auto Trade DISABLED")
 
-url = f"https://api.telegram.org/bot{os.environ['TELEGRAM_BOT_TOKEN']}/sendMessage"
-body = urllib.parse.urlencode({"chat_id": os.environ["TELEGRAM_CHAT_ID"], "text": message}).encode()
+token = os.environ["TELEGRAM_BOT_TOKEN"].strip()
+chat_id = os.environ["TELEGRAM_CHAT_ID"].strip()
+if not token or not chat_id:
+    raise RuntimeError("TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID must be non-empty after trimming whitespace")
+url = f"https://api.telegram.org/bot{token}/sendMessage"
+body = urllib.parse.urlencode({"chat_id": chat_id, "text": message}).encode()
 req = urllib.request.Request(url, data=body, method="POST")
 with urllib.request.urlopen(req, timeout=30) as response:
     result = json.load(response)
