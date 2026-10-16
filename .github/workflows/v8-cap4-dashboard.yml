@@ -25,6 +25,36 @@ jobs:
         with:
           ref: experiment-fvg-setups
 
+      - name: Sync fresh market candles from main data relay
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          python - <<'PY'
+          import json
+          import subprocess
+          from pathlib import Path
+
+          path = Path("data/xauusd_analysis.json")
+          current = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+          fresh_text = subprocess.check_output(
+              ["git", "show", "origin/main:data/xauusd_analysis.json"], text=True
+          )
+          fresh = json.loads(fresh_text)
+          intervals = fresh.get("intervals", {})
+          if not intervals.get("5m", {}).get("bars"):
+              raise RuntimeError("main relay has no closed M5 candles; refusing to overwrite dashboard data")
+          current["symbol"] = fresh.get("symbol", current.get("symbol", "XAUUSD"))
+          current["source"] = fresh.get("source", current.get("source", "Biquote"))
+          current["fetchedAt"] = fresh.get("fetchedAt", current.get("fetchedAt"))
+          current["intervals"] = intervals
+          path.parent.mkdir(parents=True, exist_ok=True)
+          path.write_text(json.dumps(current, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+          for tf, item in intervals.items():
+              bars = item.get("bars", [])
+              print(f"{tf}: {len(bars)} candles; latest={bars[-1].get('openTime') if bars else 'none'}")
+          print("Synced market candles while preserving V8 live payload and other dashboard state.")
+          PY
+
       - name: Run V8 Cap4 live dry-run
         run: |
           set -euo pipefail
