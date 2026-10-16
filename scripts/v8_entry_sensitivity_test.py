@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+"""Research-only sensitivity test for V8 Cap4 pending time and FVG entry depth.
+
+This file dynamically compiles an isolated copy of run_v8 from the locked live
+module. It does not edit or monkeypatch the imported production function.
+"""
+from __future__ import annotations
+
+import inspect
+import json
+import os
+from pathlib import Path
+
+from scripts import fvg_v8_live_dry_run as live
+from scripts.fvg_only_gold_hunter_backtest import load, pt
+
+
+START = os.getenv("FVG_ONLY_START_UTC", "2026-08-01T00:00:00+00:00")
+END = os.getenv("FVG_ONLY_END_UTC", "2026-09-09T23:59:59+00:00")
+SOURCE = os.getenv("COMBINED_SOURCE_URL")
+OUT = Path("backtest/v8_entry_sensitivity_results.json")
+
+
+def build_variant(expiry_minutes: int, entry_mode: str):
+    source = inspect.getsource(live.run_v8)
+    source = source.replace(
+        "def run_v8(m5: list[dict])",
+        "def run_v8_variant(m5: list[dict])",
+        1,
+    )
+    source = source.replace(
+        "PENDING_ENTRY_MAX_MINUTES",
+        "_VARIANT_PENDING_ENTRY_MAX_MINUTES",
+    )
+    if entry_mode == "midpoint":
+        pass
+    elif entry_mode == "shallow":
+        old = 'entry = f["mid"]'
+        new = 'entry = f["lo"] + (f["hi"] - f["lo"]) * (0.75 if d == "BUY" else 0.25)'
+        if old not in source:
+            raise RuntimeError("Could not locate midpoint entry expression; refusing silent test drift")
+        source = source.replace(old, new)
+    else:
+        raise ValueError(f"Unknown entry mode: {entry_mode}")
+
+    namespace = dict(live.__dict__)
+    namespace["_VARIANT_PENDING_ENTRY_MAX_MINUTES"] = expiry_minutes
+    exec(compile(source, f"<V8 research variant {expiry_minutes}/{entry_mode}>", "exec"), namespace)
+    return namespace["run_v8_variant"]
+
+
+def summarize(trades: list[dict]) -> dict:
+    tp = sum(t.get("status") == "TP" for t in trades)
+    sl = sum(t.get("status") == "SL" for t in trades)
+    ambiguous = sum(t.get("status") == "AMBIGUOUS" for t in trades)
+    expired = sum(t.get("status") == "EXPIRED" for t in trades)
+    invalidated = sum(t.get("status") == "INVALIDATED" for t in trades)
+    pending = sum(t.get("status") in ("PENDING", "ACTIVE") for t in trades)
+    wins_r = sum(float(t.get("rr") or 0) for t in trades if t.get("status") == "TP")
+    net_r = wins_r - sl
+    resolved = tp + sl
+    return {
+        "signals": len(trades),
+        "tp": tp,
+        "sl": sl,
+        "ambiguous": ambiguous,
+        "expired_no_entry": expired,
+        "invalidated_before_entry": invalidated,
+        "still_pending_or_active": pending,
+        "resolved_trades": resolved,
+        "win_rate_percent": round(100 * tp / resolved, 2) if resolved else None,
+        "net_r": round(net_r, 2),
+        "avg_rr_of_tp": round(wins_r / tp, 2) if tp else None,
+    }
+
+
+def main():
+    if not SOURCE:
+        raise RuntimeError("COMBINED_SOURCE_URL is required")
+    bars = load()
+    # Keep warm-up bars before START so swings/FVG context are not truncated.
+    end_dt = pt(END)
+    bars = [b for b in bars if pt(b["openTime"]) <= end_dt]
+    if not bars:
+        raise RuntimeError("No candles available in requested window")
+    first_test_idx = next((i for i, b in enumerate(bars) if pt(b["openTime"]) >= pt(START)), None)
+    if first_test_idx is None or first_test_idx < 500:
+        raise RuntimeError(f"Insufficient warm-up/history before test start: index={first_test_idx}")
+    # Run the state machine on full warm-up data, but only count lifecycle events
+    # confirmed inside the requested test interval.
+    variants = [
+        (60, "midpoint", "baseline_mid_60m"),
+        (90, "midpoint", "midpoint_90m"),
+        (120, "midpoint", "midpoint_120m"),
+        (60, "shallow", "shallow_entry_60m"),
+        (90, "shallow", "shallow_entry_90m"),
+        (120, "shallow", "shallow_entry_120m"),
+    ]
+    results = {}
+    for expiry, mode, name in variants:
+        fn = build_variant(expiry, mode)
+        _, _, meta, _, trades = fn(bars)
+        selected = [
+            t for t in trades
+            if t.get("confirmation_time") and pt(t["confirmation_time"]) >= pt(START)
+            and pt(t["confirmation_time"]) <= end_dt
+        ]
+        results[name] = {
+            "entry_mode": mode,
+            "pending_entry_minutes": expiry,
+            "summary": summarize(selected),
+            "sample_trades": [
+                {k: t.get(k) for k in (
+                    "confirmation_time", "direction", "entry", "sl", "tp", "rr",
+                    "status", "activation_time", "exit_time", "expiry_reason"
+                )}
+                for t in selected
+            ],
+        }
+        print(f"{name}: {json.dumps(results[name]['summary'], sort_keys=True)}")
+
+    output = {
+        "status": "COMPLETED",
+        "research_only": True,
+        "production_engine_modified": False,
+        "auto_trade": "DISABLED",
+        "source": SOURCE,
+        "window_utc": {"start": START, "end": END},
+        "data": {
+            "m5_bars_including_warmup": len(bars),
+            "first_m5": bars[0]["openTime"],
+            "last_m5": bars[-1]["openTime"],
+            "warmup_bars_before_test": first_test_idx,
+        },
+        "method": {
+            "baseline": "locked V8 Cap4 midpoint entry, 60-minute pending validity",
+            "alternatives": "same state machine/targets/SL/RR filter; only pending timeout or entry fraction changes",
+            "shallow_entry": "BUY at 75% of FVG width from low; SELL at 25% from low; SL stays beyond original FVG boundary",
+            "limitations": "Research sensitivity only; entry depth changes actual risk and RR, so TP is recomputed using the locked Cap4 target function and RR>=2 filter.",
+        },
+        "variants": results,
+    }
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    OUT.write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
+    print("RESULT_JSON=" + str(OUT))
+    print(json.dumps({"status": output["status"], "data": output["data"],
+                      "summaries": {k: v["summary"] for k, v in results.items()}}, indent=2))
+
+
+if __name__ == "__main__":
+    main()
