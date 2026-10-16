@@ -15,8 +15,8 @@ from scripts import fvg_v8_live_dry_run as live
 from scripts.fvg_only_gold_hunter_backtest import load, pt
 
 
-START = os.getenv("FVG_ONLY_START_UTC", "2026-08-01T00:00:00+00:00")
-END = os.getenv("FVG_ONLY_END_UTC", "2026-09-09T23:59:59+00:00")
+START = os.getenv("FVG_ONLY_START_UTC", "2026-10-15T00:00:00+00:00")
+END = os.getenv("FVG_ONLY_END_UTC", "2026-10-16T23:59:59+00:00")
 SOURCE = os.getenv("COMBINED_SOURCE_URL")
 OUT = Path("backtest/v8_entry_sensitivity_results.json")
 
@@ -77,15 +77,28 @@ def summarize(trades: list[dict]) -> dict:
 def main():
     if not SOURCE:
         raise RuntimeError("COMBINED_SOURCE_URL is required")
-    bars = load()
+    local_json = os.getenv("V8_SENSITIVITY_DATA_JSON", "data/xauusd_analysis.json")
+    local_path = Path(local_json)
+    if local_path.exists():
+        market = json.loads(local_path.read_text(encoding="utf-8"))
+        raw_bars = market.get("intervals", {}).get("5m", {}).get("bars", [])
+        bars = [
+            {"openTime": str(b["openTime"]), "open": float(b["open"]), "high": float(b["high"]), "low": float(b["low"]), "close": float(b["close"])}
+            for b in raw_bars if b.get("openTime") and b.get("isOpen") is False
+        ]
+        bars.sort(key=lambda b: b["openTime"])
+        print(f"DATA_SOURCE=local relay JSON ({len(bars)} M5 candles)")
+    else:
+        bars = load()
+        print(f"DATA_SOURCE=historical CSV ({len(bars)} M5 candles)")
     # Keep warm-up bars before START so swings/FVG context are not truncated.
     end_dt = pt(END)
     bars = [b for b in bars if pt(b["openTime"]) <= end_dt]
     if not bars:
         raise RuntimeError("No candles available in requested window")
     first_test_idx = next((i for i, b in enumerate(bars) if pt(b["openTime"]) >= pt(START)), None)
-    if first_test_idx is None or first_test_idx < 500:
-        raise RuntimeError(f"Insufficient warm-up/history before test start: index={first_test_idx}")
+    if first_test_idx is None or first_test_idx < 100:
+        raise RuntimeError(f"Insufficient warm-up/history before test start: index={first_test_idx}; need at least 100 bars")
     # Run the state machine on full warm-up data, but only count lifecycle events
     # confirmed inside the requested test interval.
     variants = [
@@ -131,6 +144,7 @@ def main():
             "first_m5": bars[0]["openTime"],
             "last_m5": bars[-1]["openTime"],
             "warmup_bars_before_test": first_test_idx,
+            "minimum_warmup_required": 100,
         },
         "method": {
             "baseline": "locked V8 Cap4 midpoint entry, 60-minute pending validity",
