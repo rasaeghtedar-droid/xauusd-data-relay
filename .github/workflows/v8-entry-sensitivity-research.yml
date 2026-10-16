@@ -3,14 +3,14 @@ on:
   workflow_dispatch:
     inputs:
       start_utc:
-        description: "Historical 30-day sample start UTC"
+        description: "Separate historical validation window start UTC"
         required: true
-        default: "2026-08-26T00:00:00+00:00"
+        default: "2026-07-27T00:00:00+00:00"
         type: string
       end_utc:
-        description: "Historical 30-day sample end UTC"
+        description: "Separate historical validation window end UTC"
         required: true
-        default: "2026-09-25T23:59:59+00:00"
+        default: "2026-08-25T23:59:59+00:00"
         type: string
 
 permissions:
