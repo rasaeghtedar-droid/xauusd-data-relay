@@ -1,0 +1,79 @@
+name: V8 Entry Sensitivity Research
+on:
+  workflow_dispatch:
+    inputs:
+      start_utc:
+        description: "Test start UTC (available data currently starts Oct 13)"
+        required: true
+        default: "2026-10-15T00:00:00+00:00"
+        type: string
+      end_utc:
+        description: "Test end UTC"
+        required: true
+        default: "2026-10-16T23:59:59+00:00"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  sensitivity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout isolated V8 research branch
+        uses: actions/checkout@v4
+        with:
+          ref: experiment-fvg-setups
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Load fresh market candles from main relay
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git show origin/main:data/xauusd_analysis.json > data/xauusd_analysis.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d = json.loads(Path("data/xauusd_analysis.json").read_text(encoding="utf-8"))
+          bars = d.get("intervals", {}).get("5m", {}).get("bars", [])
+          if len(bars) < 200:
+              raise RuntimeError(f"Insufficient relay M5 bars: {len(bars)}")
+          print("FETCHED_AT_UTC=", d.get("fetchedAt"))
+          print("M5_COUNT=", len(bars))
+          print("FIRST_M5=", bars[0].get("openTime"))
+          print("LAST_M5=", bars[-1].get("openTime"))
+          PY
+
+      - name: Compile research script and engine imports
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/v8_entry_sensitivity_test.py scripts/fvg_v8_live_dry_run.py
+          python - <<'PY'
+          from scripts import fvg_v8_live_dry_run as live
+          assert callable(live.run_v8)
+          print("LOCKED_V8_IMPORT=PASS")
+          PY
+
+      - name: Run isolated sensitivity comparison
+        env:
+          FVG_ONLY_START_UTC: ${{ inputs.start_utc }}
+          FVG_ONLY_END_UTC: ${{ inputs.end_utc }}
+          V8_SENSITIVITY_DATA_JSON: data/xauusd_analysis.json
+          COMBINED_SOURCE_URL: "local-main-relay-json"
+        run: |
+          set -euo pipefail
+          python scripts/v8_entry_sensitivity_test.py | tee /tmp/v8_entry_sensitivity.log
+
+      - name: Upload research results
+        uses: actions/upload-artifact@v4
+        with:
+          name: v8-entry-sensitivity-results
+          path: |
+            backtest/v8_entry_sensitivity_results.json
+            /tmp/v8_entry_sensitivity.log
+          if-no-files-found: error
+          retention-days: 14
