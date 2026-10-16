@@ -133,10 +133,37 @@ def main():
             if t.get("confirmation_time") and pt(t["confirmation_time"]) >= pt(START)
             and pt(t["confirmation_time"]) <= end_dt
         ]
+        summary = summarize(selected)
+        # Audit candle-level ambiguity: when Entry and TP/SL are first touched
+        # inside the same M5 candle, OHLC alone cannot establish the sequence.
+        same_bar_entry_exit = [
+            t for t in selected
+            if t.get("activation_time")
+            and t.get("exit_time") == t.get("activation_time")
+            and t.get("status") in ("TP", "SL", "AMBIGUOUS")
+        ]
+        late_pending_terminal = []
+        for t in selected:
+            if t.get("activation_time") is not None or t.get("status") not in ("EXPIRED", "INVALIDATED"):
+                continue
+            age = (pt(t["exit_time"]) - pt(t["confirmation_time"])).total_seconds() / 60.0
+            if age > expiry:
+                late_pending_terminal.append({
+                    "confirmation_time": t.get("confirmation_time"),
+                    "status": t.get("status"),
+                    "exit_time": t.get("exit_time"),
+                    "age_minutes": round(age, 2),
+                    "expiry_reason": t.get("expiry_reason"),
+                    "audit_note": "Terminal event occurred after configured timeout; inspect timeout-vs-invalidation priority and missing-candle gap."
+                })
+        summary["same_m5_bar_entry_and_exit"] = len(same_bar_entry_exit)
+        summary["pending_terminal_events_after_timeout"] = len(late_pending_terminal)
         results[name] = {
             "entry_mode": mode,
             "pending_entry_minutes": expiry,
-            "summary": summarize(selected),
+            "summary": summary,
+            "same_bar_entry_exit_examples": same_bar_entry_exit,
+            "pending_terminal_events_after_timeout": late_pending_terminal,
             "sample_trades": [
                 {k: t.get(k) for k in (
                     "confirmation_time", "direction", "entry", "sl", "tp", "rr",
