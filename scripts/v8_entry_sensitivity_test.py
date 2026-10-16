@@ -62,8 +62,15 @@ def summarize(trades: list[dict]) -> dict:
     expired = sum(t.get("status") == "EXPIRED" for t in trades)
     invalidated = sum(t.get("status") == "INVALIDATED" for t in trades)
     pending = sum(t.get("status") in ("PENDING", "ACTIVE") for t in trades)
+    # Count every lifecycle outcome explicitly. A setup cancelled before Entry
+    # is not a trade loss; it contributes 0R and remains visible in the audit.
+    status_counts = {}
+    for trade in trades:
+        status = str(trade.get("status") or "UNKNOWN")
+        status_counts[status] = status_counts.get(status, 0) + 1
     wins_r = sum(float(t.get("rr") or 0) for t in trades if t.get("status") == "TP")
-    net_r = wins_r - sl
+    losses_r = sum(abs(float(t.get("result_r", -1) or 0)) for t in trades if t.get("status") == "SL")
+    net_r = wins_r - losses_r
     resolved = tp + sl
     return {
         "signals": len(trades),
@@ -73,6 +80,8 @@ def summarize(trades: list[dict]) -> dict:
         "expired_no_entry": expired,
         "invalidated_before_entry": invalidated,
         "still_pending_or_active": pending,
+        "status_counts": status_counts,
+        "non_trade_cancellations_zero_r": expired + invalidated,
         "resolved_trades": resolved,
         "win_rate_percent": round(100 * tp / resolved, 2) if resolved else None,
         "net_r": round(net_r, 2),
@@ -131,7 +140,7 @@ def main():
             "sample_trades": [
                 {k: t.get(k) for k in (
                     "confirmation_time", "direction", "entry", "sl", "tp", "rr",
-                    "status", "activation_time", "exit_time", "expiry_reason"
+                    "status", "activation_time", "exit_time", "expiry_reason", "result_r"
                 )}
                 for t in selected
             ],
@@ -156,7 +165,8 @@ def main():
             "baseline": "locked V8 Cap4 midpoint entry, 60-minute pending validity",
             "alternatives": "same state machine/targets/SL/RR filter; only pending timeout or entry fraction changes",
             "shallow_entry": "BUY at 75% of FVG width from low; SELL at 25% from low; SL stays beyond original FVG boundary",
-            "limitations": "Research sensitivity only; entry depth changes actual risk and RR, so TP is recomputed using the locked Cap4 target function and RR>=2 filter.",
+            "limitations": "Research sensitivity only; entry depth changes actual risk and RR, so TP is recomputed using the locked Cap4 target function and RR>=2 filter. Expired and invalidated signals are counted separately as zero-R non-trades, not as SLs.",
+            "lifecycle_audit": "Reports each signal status, technical invalidation reason, expiry reason, activation time and exit time to audit pending setup cancellation.",
         },
         "variants": results,
     }
