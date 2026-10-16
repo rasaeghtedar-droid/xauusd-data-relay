@@ -38,6 +38,26 @@ def build_variant(expiry_minutes: int, entry_mode: str):
         "PENDING_ENTRY_MAX_MINUTES",
         "_VARIANT_PENDING_ENTRY_MAX_MINUTES",
     )
+    # Research-only lifecycle correction: calculate pending age before technical
+    # invalidation so a candle gap cannot produce a terminal event after timeout.
+    age_anchor = '                technical_invalid = ('
+    age_injection = (
+        '                confirmation_dt = pt(active["confirmation_time"])\\n'
+        '                current_dt = pt(c["openTime"])\\n'
+        '                pending_age_minutes = (current_dt - confirmation_dt).total_seconds() / 60.0\\n'
+        '                technical_invalid = ('
+    )
+    if age_anchor not in source:
+        raise RuntimeError("Could not locate pending lifecycle anchor; refusing silent test drift")
+    source = source.replace(age_anchor, age_injection, 1)
+    invalidation_anchor = "                if technical_invalid:"
+    if invalidation_anchor not in source:
+        raise RuntimeError("Could not locate technical invalidation branch; refusing silent test drift")
+    source = source.replace(
+        invalidation_anchor,
+        "                if technical_invalid and pending_age_minutes < _VARIANT_PENDING_ENTRY_MAX_MINUTES:",
+        1,
+    )
     if entry_mode == "midpoint":
         pass
     elif entry_mode == "shallow":
@@ -133,15 +153,21 @@ def main():
             if t.get("confirmation_time") and pt(t["confirmation_time"]) >= pt(START)
             and pt(t["confirmation_time"]) <= end_dt
         ]
-        summary = summarize(selected)
-        # Audit candle-level ambiguity: when Entry and TP/SL are first touched
-        # inside the same M5 candle, OHLC alone cannot establish the sequence.
+        # Same-bar Entry and exit cannot be sequenced from M5 OHLC. Downgrade
+        # every such outcome to AMBIGUOUS/0R in this research copy only.
         same_bar_entry_exit = [
             t for t in selected
             if t.get("activation_time")
             and t.get("exit_time") == t.get("activation_time")
             and t.get("status") in ("TP", "SL", "AMBIGUOUS")
         ]
+        for trade in same_bar_entry_exit:
+            trade["pre_audit_status"] = trade.get("status")
+            trade["pre_audit_result_r"] = trade.get("result_r")
+            trade["status"] = "AMBIGUOUS"
+            trade["result_r"] = 0.0
+            trade["same_bar_entry_exit_ambiguous"] = True
+        summary = summarize(selected)
         late_pending_terminal = []
         for t in selected:
             if t.get("activation_time") is not None or t.get("status") not in ("EXPIRED", "INVALIDATED"):
@@ -193,7 +219,7 @@ def main():
             "alternatives": "same state machine/targets/SL/RR filter; only pending timeout or entry fraction changes",
             "shallow_entry": "BUY at 75% of FVG width from low; SELL at 25% from low; SL stays beyond original FVG boundary",
             "limitations": "Research sensitivity only; entry depth changes actual risk and RR, so TP is recomputed using the locked Cap4 target function and RR>=2 filter. Expired and invalidated signals are counted separately as zero-R non-trades, not as SLs.",
-            "lifecycle_audit": "Reports each signal status, technical invalidation reason, expiry reason, activation time and exit time to audit pending setup cancellation.",
+            "lifecycle_audit": "Research-only timeout-first priority at/after pending deadline; same-M5-bar entry+exit downgraded to AMBIGUOUS/0R because OHLC cannot establish sequence. Production source remains unchanged.",
         },
         "variants": results,
     }
