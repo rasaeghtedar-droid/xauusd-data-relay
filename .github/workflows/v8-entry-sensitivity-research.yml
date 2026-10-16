@@ -3,14 +3,14 @@ on:
   workflow_dispatch:
     inputs:
       start_utc:
-        description: "Test start UTC (available data currently starts Oct 13)"
+        description: "Historical 30-day sample start UTC"
         required: true
-        default: "2026-10-15T00:00:00+00:00"
+        default: "2026-08-26T00:00:00+00:00"
         type: string
       end_utc:
-        description: "Test end UTC"
+        description: "Historical 30-day sample end UTC"
         required: true
-        default: "2026-10-16T23:59:59+00:00"
+        default: "2026-09-25T23:59:59+00:00"
         type: string
 
 permissions:
@@ -30,24 +30,22 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Load fresh market candles from main relay
+      - name: Validate historical 5-minute dataset coverage
+        env:
+          COMBINED_SOURCE_URL: https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv
         run: |
           set -euo pipefail
-          git fetch origin main
-          git show origin/main:data/xauusd_analysis.json > data/xauusd_analysis.json
           python - <<'PY'
-          import json
-          from pathlib import Path
-          d = json.loads(Path("data/xauusd_analysis.json").read_text(encoding="utf-8"))
-          bars = d.get("intervals", {}).get("5m", {}).get("bars", [])
-          if len(bars) < 200:
-              raise RuntimeError(f"Insufficient relay M5 bars: {len(bars)}")
-          print("FETCHED_AT_UTC=", d.get("fetchedAt"))
-          print("M5_COUNT=", len(bars))
-          print("FIRST_M5=", bars[0].get("openTime"))
-          print("LAST_M5=", bars[-1].get("openTime"))
+          import csv, io, os, urllib.request
+          url = os.environ["COMBINED_SOURCE_URL"]
+          raw = urllib.request.urlopen(url, timeout=60).read().decode("utf-8")
+          rows = list(csv.DictReader(io.StringIO(raw)))
+          if len(rows) < 5000:
+              raise RuntimeError(f"Historical dataset unexpectedly small: {len(rows)} rows")
+          print("HISTORICAL_M5_COUNT=", len(rows))
+          print("FIRST_M5=", rows[0]["datetime"])
+          print("LAST_M5=", rows[-1]["datetime"])
           PY
-
       - name: Compile research script and engine imports
         run: |
           set -euo pipefail
@@ -62,8 +60,8 @@ jobs:
         env:
           FVG_ONLY_START_UTC: ${{ inputs.start_utc }}
           FVG_ONLY_END_UTC: ${{ inputs.end_utc }}
-          V8_SENSITIVITY_DATA_JSON: data/xauusd_analysis.json
-          COMBINED_SOURCE_URL: "local-main-relay-json"
+          V8_SENSITIVITY_DATA_JSON: /tmp/no-local-relay-json.json
+          COMBINED_SOURCE_URL: https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv
         run: |
           set -euo pipefail
           python scripts/v8_entry_sensitivity_test.py | tee /tmp/v8_entry_sensitivity.log
