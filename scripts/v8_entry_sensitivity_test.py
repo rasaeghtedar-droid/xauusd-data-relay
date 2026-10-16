@@ -42,9 +42,9 @@ def build_variant(expiry_minutes: int, entry_mode: str):
     # invalidation so a candle gap cannot produce a terminal event after timeout.
     age_anchor = '                technical_invalid = ('
     age_injection = (
-        '                confirmation_dt = pt(active["confirmation_time"])\\n'
-        '                current_dt = pt(c["openTime"])\\n'
-        '                pending_age_minutes = (current_dt - confirmation_dt).total_seconds() / 60.0\\n'
+        '                confirmation_dt = pt(active["confirmation_time"])\n'
+        '                current_dt = pt(c["openTime"])\n'
+        '                pending_age_minutes = (current_dt - confirmation_dt).total_seconds() / 60.0\n'
         '                technical_invalid = ('
     )
     if age_anchor not in source:
