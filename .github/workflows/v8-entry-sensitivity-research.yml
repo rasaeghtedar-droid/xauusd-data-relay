@@ -99,5 +99,6 @@ jobs:
           path: |
             backtest/v8_entry_sensitivity_results.json
             /tmp/v8_entry_sensitivity.log
+            /tmp/v8_pending_expiry_historical_regression.json
           if-no-files-found: error
           retention-days: 14
