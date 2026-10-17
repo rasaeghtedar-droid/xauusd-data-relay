@@ -20,8 +20,11 @@ from scripts.fvg_only_gold_hunter_backtest import load, pt
 
 
 def baseline_run_v8():
+    # GitHub Actions checks out the candidate branch into the workspace.
+    # Fetch the baseline file from the remote main branch explicitly, since
+    # it may not be part of the shallow checkout's local object database.
     raw = subprocess.check_output(
-        ["git", "show", "origin/main:scripts/fvg_v8_live_dry_run.py"],
+        ["git", "show", "refs/remotes/origin/main:scripts/fvg_v8_live_dry_run.py"],
         cwd=ROOT, text=True,
     )
     start = raw.index("def run_v8(")
