@@ -190,6 +190,55 @@ def main() -> None:
                 "candidate_status": cand[key].get("status"),
             })
 
+    # Audit the four expected INVALIDATED -> EXPIRED transitions against
+    # the actual M5 timeline. This distinguishes the contractual deadline from
+    # the first candle on which the replay could observe/record termination.
+    bar_times = sorted({
+        pt(bar["openTime"]) for bar in bars
+        if isinstance(bar, dict) and bar.get("openTime")
+    })
+    terminal_timing_audit = []
+    for change in status_changes:
+        key = change["signal_key"]
+        before = base.get(key, {})
+        after = cand.get(key, {})
+        confirmation = before.get("confirmation_time") or after.get("confirmation_time")
+        terminal_time = after.get("exit_time") or before.get("exit_time")
+        item = {
+            "signal_key": key,
+            "baseline_status": change["baseline_status"],
+            "candidate_status": change["candidate_status"],
+            "confirmation_time": confirmation,
+            "baseline_terminal_time": before.get("exit_time"),
+            "candidate_terminal_time": after.get("exit_time"),
+        }
+        try:
+            if confirmation:
+                deadline = pt(confirmation) + __import__("datetime").timedelta(
+                    minutes=candidate.PENDING_ENTRY_MAX_MINUTES
+                )
+                item["expected_deadline"] = deadline.isoformat()
+                if terminal_time:
+                    observed = pt(terminal_time)
+                    item["observed_terminal_time"] = observed.isoformat()
+                    item["minutes_after_deadline"] = round(
+                        (observed - deadline).total_seconds() / 60, 2
+                    )
+                    prior = [stamp for stamp in bar_times if stamp < observed]
+                    item["previous_available_m5"] = prior[-1].isoformat() if prior else None
+                    item["previous_to_terminal_gap_minutes"] = round(
+                        (observed - prior[-1]).total_seconds() / 60, 2
+                    ) if prior else None
+                    item["timing_classification"] = (
+                        "ON_OR_BEFORE_DEADLINE" if observed <= deadline
+                        else "AFTER_DEADLINE_WITH_CANDLE_GAP"
+                        if prior and (observed - prior[-1]).total_seconds() > 5 * 60
+                        else "AFTER_DEADLINE_NEXT_AVAILABLE_CANDLE"
+                    )
+        except (TypeError, ValueError, KeyError):
+            item["timing_classification"] = "TIMESTAMP_UNAVAILABLE"
+        terminal_timing_audit.append(item)
+
     # Candidate must never return a still-pending signal whose deadline passed.
     deadline_violations = []
     for key, trade in cand.items():
@@ -232,6 +281,7 @@ def main() -> None:
         "candidate_only_signals": candidate_only_details[:20],
         "status_change_count": len(status_changes),
         "status_changes": status_changes[:20],
+        "terminal_timing_audit": terminal_timing_audit[:20],
         "shared_TP_SL_AMBIGUOUS_records_checked": len(shared_immutable),
         "changed_resolved_records": changed_resolved[:20],
         "changed_resolved_record_count": len(changed_resolved),
