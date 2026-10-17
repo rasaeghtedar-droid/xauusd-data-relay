@@ -147,6 +147,76 @@ def timeframe_snapshot(m5: list[dict]) -> dict:
     }
 
 
+def expire_persisted_pending_state(
+    history_path: Path = HISTORY_PATH,
+    active_signal_path: Path = ACTIVE_SIGNAL_PATH,
+    now: datetime | None = None,
+) -> int:
+    """Expire persisted, not-yet-activated signals by wall clock.
+
+    Called on every relay run, before data freshness checks, so a stale/missing
+    candle feed cannot leave a pending signal actionable forever. Detection is
+    bounded by the scheduler cadence; this does not promise exact-second timing.
+    Returns the number of history records newly expired.
+    """
+    now = now or datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        raise ValueError("now must be timezone-aware")
+
+    history = []
+    if history_path.exists():
+        try:
+            loaded = json.loads(history_path.read_text(encoding="utf-8"))
+            if isinstance(loaded, list):
+                history = loaded
+        except (OSError, json.JSONDecodeError):
+            history = []
+
+    expired_keys = set()
+    changed = 0
+    for item in history:
+        if item.get("status") != "PENDING" or item.get("activation_time"):
+            continue
+        confirmation = item.get("confirmation_time")
+        if not confirmation:
+            continue
+        try:
+            confirmed_at = pt(confirmation)
+        except (TypeError, ValueError):
+            continue
+        timeout = int(item.get("pending_expiry_minutes") or PENDING_ENTRY_MAX_MINUTES)
+        deadline = confirmed_at + timedelta(minutes=timeout)
+        if now < deadline:
+            continue
+        item.update({
+            "status": "EXPIRED",
+            "result_r": 0.0,
+            "exit_time": deadline.isoformat().replace("+00:00", "Z"),
+            "expiry_reason": "wall-clock pending deadline reached before entry activation",
+            "expiry_detected_at": now.isoformat().replace("+00:00", "Z"),
+            "expiry_detection_delay_seconds": max(0, int((now - deadline).total_seconds())),
+        })
+        expired_keys.add(str(item.get("signal_key") or ""))
+        changed += 1
+
+    if changed:
+        history_path.parent.mkdir(parents=True, exist_ok=True)
+        history_path.write_text(json.dumps(history, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    if active_signal_path.exists():
+        try:
+            state = json.loads(active_signal_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            state = None
+        if isinstance(state, dict) and state.get("signal_key") in expired_keys:
+            active_signal_path.write_text(
+                json.dumps({"status": "NO TRADE", "signal_key": None, "signal": None},
+                           ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+    return changed
+
+
 def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
     m15 = agg(m5, 15)
     m15_times = [pt(x["openTime"]) for x in m15]
@@ -175,11 +245,38 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
             # a one-way move from Entry -> TP from being counted as a TP when
             # the real signal was never executable.
             if not active.get("entry_activated", False):
-                # Technical invalidation has priority over the 60-minute timer.
-                # We use the original FVG boundary and a CLOSED M5 candle:
-                # BUY -> close below FVG low = bullish setup invalid.
-                # SELL -> close above FVG high = bearish setup invalid.
-                # A wick through the boundary alone does not cancel it.
+                # Deadline takes priority over candle-based invalidation once
+                # the pending-entry window has ended. The persisted wall-clock
+                # monitor also expires pending signals when data is stale/missing.
+                confirmation_dt = pt(active["confirmation_time"])
+                current_dt = pt(c["openTime"])
+                pending_age_minutes = (current_dt - confirmation_dt).total_seconds() / 60.0
+                if pending_age_minutes >= PENDING_ENTRY_MAX_MINUTES:
+                    latest_result = {
+                        "status": "EXPIRED",
+                        "icon": "⌛",
+                        "signal_key": f'{active["direction"]}|{active["confirmation_time"]}',
+                        "direction": active["direction"],
+                        "entry": active["entry"],
+                        "sl": active["sl"],
+                        "tp": active["tp"],
+                        "rr": active["rr"],
+                        "result_r": 0.0,
+                        "activation_time": None,
+                        "exit_time": confirmation_dt.replace(tzinfo=timezone.utc).isoformat().replace("+00:00", "Z"),
+                        "expiry_reason": "Entry not touched within 60 minutes",
+                    }
+                    if active_history is not None:
+                        active_history.update(latest_result)
+                        trade_history.append(dict(active_history))
+                    else:
+                        trade_history.append(dict(latest_result))
+                    active = None
+                    active_history = None
+                    continue
+
+                # Before the deadline, technical invalidation uses the original
+                # FVG boundary and a CLOSED M5 candle. A wick alone does not cancel.
                 technical_invalid = (
                     c["close"] < active["zone_lo"]
                     if active["direction"] == "BUY"
@@ -208,38 +305,9 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
                     active = None
                     active_history = None
                     continue
-                # Pending-entry validity window: 60 minutes from confirmation.
-                # If Entry is not touched inside this window, the setup expires
-                # and is no longer actionable.
-                confirmation_dt = pt(active["confirmation_time"])
-                current_dt = pt(c["openTime"])
-                pending_age_minutes = (current_dt - confirmation_dt).total_seconds() / 60.0
                 if active is None:
                     continue
-                if pending_age_minutes >= PENDING_ENTRY_MAX_MINUTES:
-                    latest_result = {
-                        "status": "EXPIRED",
-                        "icon": "⌛",
-                        "signal_key": f'{active["direction"]}|{active["confirmation_time"]}',
-                        "direction": active["direction"],
-                        "entry": active["entry"],
-                        "sl": active["sl"],
-                        "tp": active["tp"],
-                        "rr": active["rr"],
-                        "result_r": 0.0,
-                        "activation_time": None,
-                        "exit_time": c["openTime"],
-                        "expiry_reason": "Entry not touched within 60 minutes",
-                    }
-                    if active_history is not None:
-                        active_history.update(latest_result)
-                        trade_history.append(dict(active_history))
-                    else:
-                        trade_history.append(dict(latest_result))
-                    active = None
-                    active_history = None
-                else:
-                    entry_hit = (
+                entry_hit = (
                         c["low"] <= active["entry"]
                         if active["direction"] == "BUY"
                         else c["high"] >= active["entry"]
@@ -482,6 +550,7 @@ def merge_into_analysis(payload: dict) -> None:
 
 def main() -> None:
     fetched_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    expired_before_fetch = expire_persisted_pending_state()
 
     try:
         m5, api_diagnostics = fetch_closed_m5()
@@ -535,11 +604,16 @@ def main() -> None:
         # that was already recorded as a live signal. It must never CREATE a
         # brand-new history record. Otherwise a later rolling replay can make
         # an old signal appear on the dashboard hours after it actually formed.
+        terminal_statuses = {"EXPIRED", "INVALIDATED", "TP", "SL", "AMBIGUOUS"}
         for item in replay_history:
             key = item.get("signal_key")
             if not key or key not in history_by_key:
                 continue
             current = history_by_key[key]
+            # A persisted terminal result is immutable; rolling replay must not
+            # resurrect or relabel it after a later candle/data gap.
+            if current.get("status") in terminal_statuses:
+                continue
             current.update(item)
             history_by_key[key] = current
 
