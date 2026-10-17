@@ -78,8 +78,8 @@ jobs:
           COMBINED_SOURCE_URL: https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv
         run: |
           set -euo pipefail
-          git fetch --no-tags --depth=1 origin main:refs/remotes/origin/main
-          git cat-file -e origin/main:scripts/fvg_v8_live_dry_run.py
+          git fetch --no-tags --depth=1 origin experiment-fvg-setups:refs/remotes/origin/experiment-fvg-setups
+          git cat-file -e origin/experiment-fvg-setups:scripts/fvg_v8_live_dry_run.py
           python -m py_compile scripts/v8_pending_expiry_historical_regression.py
           python scripts/v8_pending_expiry_historical_regression.py | tee /tmp/v8_pending_expiry_historical_regression.json
 
