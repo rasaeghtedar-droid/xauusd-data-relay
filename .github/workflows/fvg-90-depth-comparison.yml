@@ -43,5 +43,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: fvg-depth-comparison-${{ matrix.period }}
-          path: backtest/fvg_90_depth_comparison.json
+          path: |
+            backtest/fvg_90_depth_comparison.json
+            backtest/fvg_raw_price_audit.json
           if-no-files-found: error
