@@ -59,7 +59,7 @@ jobs:
       - name: Run pending lifecycle gap contract tests (research-only)
         run: python scripts/v8_pending_lifecycle_gap_test.py
 
-      - name: Audit actual V8 pending lifecycle (read-only)
+      - name: Audit candidate V8 pending lifecycle
         run: python scripts/v8_live_pending_lifecycle_audit.py
 
       - name: Test isolated pending expiry policy prototype
