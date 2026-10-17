@@ -144,6 +144,9 @@ def main():
         (90, "shallow", "shallow_entry_90m"),
         (120, "shallow", "shallow_entry_120m"),
     ]
+    # Timestamp index for diagnosing terminal events that are recorded on the
+    # first available candle after the configured pending deadline.
+    bar_index_by_time = {str(b["openTime"]): i for i, b in enumerate(bars)}
     results = {}
     for expiry, mode, name in variants:
         fn = build_variant(expiry, mode)
@@ -169,19 +172,41 @@ def main():
             trade["same_bar_entry_exit_ambiguous"] = True
         summary = summarize(selected)
         late_pending_terminal = []
+        terminal_timing_audit = []
         for t in selected:
             if t.get("activation_time") is not None or t.get("status") not in ("EXPIRED", "INVALIDATED"):
                 continue
-            age = (pt(t["exit_time"]) - pt(t["confirmation_time"])).total_seconds() / 60.0
-            if age > expiry:
-                late_pending_terminal.append({
-                    "confirmation_time": t.get("confirmation_time"),
-                    "status": t.get("status"),
-                    "exit_time": t.get("exit_time"),
-                    "age_minutes": round(age, 2),
-                    "expiry_reason": t.get("expiry_reason"),
-                    "audit_note": "Terminal event occurred after configured timeout; inspect timeout-vs-invalidation priority and missing-candle gap."
-                })
+            confirmation_dt = pt(t["confirmation_time"])
+            observed_dt = pt(t["exit_time"])
+            deadline_dt = confirmation_dt + __import__("datetime").timedelta(minutes=expiry)
+            age = (observed_dt - confirmation_dt).total_seconds() / 60.0
+            idx = bar_index_by_time.get(str(t.get("exit_time")))
+            previous_bar_time = bars[idx - 1]["openTime"] if idx is not None and idx > 0 else None
+            previous_bar_dt = pt(previous_bar_time) if previous_bar_time else None
+            gap_minutes = round((observed_dt - previous_bar_dt).total_seconds() / 60.0, 2) if previous_bar_dt else None
+            audit = {
+                "confirmation_time": t.get("confirmation_time"),
+                "configured_timeout_minutes": expiry,
+                "expected_deadline_time": deadline_dt.isoformat(),
+                "terminal_status": t.get("status"),
+                "observed_terminal_time": t.get("exit_time"),
+                "minutes_from_confirmation_to_terminal": round(age, 2),
+                "terminal_delay_after_deadline_minutes": round(max(0.0, (observed_dt - deadline_dt).total_seconds() / 60.0), 2),
+                "previous_available_m5_candle": previous_bar_time,
+                "gap_from_previous_available_m5_minutes": gap_minutes,
+                "expiry_reason": t.get("expiry_reason"),
+                "classification": (
+                    "AFTER_DEADLINE_WITH_CANDLE_GAP"
+                    if observed_dt > deadline_dt and gap_minutes is not None and gap_minutes > 5.1
+                    else "AFTER_DEADLINE_NO_LARGE_GAP"
+                    if observed_dt > deadline_dt
+                    else "AT_OR_BEFORE_DEADLINE"
+                ),
+                "audit_note": "Observed terminal time is the first available M5 candle processed by the simulator, not necessarily the exact deadline time."
+            }
+            terminal_timing_audit.append(audit)
+            if observed_dt > deadline_dt:
+                late_pending_terminal.append(audit)
         summary["same_m5_bar_entry_and_exit"] = len(same_bar_entry_exit)
         summary["pending_terminal_events_after_timeout"] = len(late_pending_terminal)
         results[name] = {
@@ -190,6 +215,7 @@ def main():
             "summary": summary,
             "same_bar_entry_exit_examples": same_bar_entry_exit,
             "pending_terminal_events_after_timeout": late_pending_terminal,
+            "terminal_timing_audit": terminal_timing_audit,
             "sample_trades": [
                 {k: t.get(k) for k in (
                     "confirmation_time", "direction", "entry", "sl", "tp", "rr",
@@ -219,7 +245,7 @@ def main():
             "alternatives": "same state machine/targets/SL/RR filter; only pending timeout or entry fraction changes",
             "shallow_entry": "BUY at 75% of FVG width from low; SELL at 25% from low; SL stays beyond original FVG boundary",
             "limitations": "Research sensitivity only; entry depth changes actual risk and RR, so TP is recomputed using the locked Cap4 target function and RR>=2 filter. Expired and invalidated signals are counted separately as zero-R non-trades, not as SLs.",
-            "lifecycle_audit": "Research-only timeout-first priority at/after pending deadline; same-M5-bar entry+exit downgraded to AMBIGUOUS/0R because OHLC cannot establish sequence. Production source remains unchanged.",
+            "lifecycle_audit": "Research-only timeout-first priority at/after pending deadline; same-M5-bar entry+exit downgraded to AMBIGUOUS/0R. Reports expected deadline, observed terminal candle, delay, prior available candle and candle-gap classification. Production source remains unchanged.",
         },
         "variants": results,
     }
