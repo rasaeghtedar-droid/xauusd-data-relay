@@ -208,7 +208,22 @@ def expire_persisted_pending_state(
             state = json.loads(active_signal_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             state = None
-        if isinstance(state, dict) and state.get("signal_key") in expired_keys:
+        clear_active = isinstance(state, dict) and state.get("signal_key") in expired_keys
+
+        # Defensive recovery: if active state exists but its history row was
+        # lost/corrupt, still do not leave an old pending signal actionable.
+        if isinstance(state, dict) and state.get("status") == "SIGNAL":
+            signal = state.get("signal") or {}
+            if not signal.get("activation_time") and signal.get("confirmation_time"):
+                try:
+                    confirmed_at = pt(signal["confirmation_time"])
+                    timeout = int(signal.get("pending_expiry_minutes") or PENDING_ENTRY_MAX_MINUTES)
+                    if now >= confirmed_at + timedelta(minutes=timeout):
+                        clear_active = True
+                except (TypeError, ValueError):
+                    pass
+
+        if clear_active:
             active_signal_path.write_text(
                 json.dumps({"status": "NO TRADE", "signal_key": None, "signal": None},
                            ensure_ascii=False, indent=2),
