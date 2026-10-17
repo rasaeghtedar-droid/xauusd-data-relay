@@ -6,7 +6,6 @@ write relay state, call APIs, send notifications, or execute trades.
 """
 from __future__ import annotations
 
-import inspect
 import json
 import subprocess
 import sys
@@ -57,7 +56,7 @@ def main() -> None:
     bars = load()
     if len(bars) < 5000:
         raise RuntimeError(f"Insufficient historical bars: {len(bars)}")
-    baseline_fn = baseline_run_v8
+    baseline_fn = baseline_run_v8()
     candidate_fn = candidate.run_v8
 
     _, _, base_meta, _, base_trades = baseline_fn(bars)
