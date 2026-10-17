@@ -4,6 +4,16 @@ on:
 jobs:
   compare:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - period: first-half
+            start_utc: "2026-08-01T00:00:00+00:00"
+            end_utc: "2026-08-20T23:59:59+00:00"
+          - period: second-half
+            start_utc: "2026-08-21T00:00:00+00:00"
+            end_utc: "2026-09-09T23:59:59+00:00"
     steps:
       - name: Checkout isolated experiment branch
         uses: actions/checkout@v4
@@ -17,10 +27,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-      - name: Run baseline versus 90-percent comparison
+      - name: Run midpoint versus 70, 80 and 90 percent depth comparison
         env:
-          FVG_ONLY_START_UTC: "2026-08-01T00:00:00+00:00"
-          FVG_ONLY_END_UTC: "2026-09-09T23:59:59+00:00"
+          FVG_ONLY_START_UTC: ${{ matrix.start_utc }}
+          FVG_ONLY_END_UTC: ${{ matrix.end_utc }}
           COMBINED_SOURCE_URL: "https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv"
           PYTHONPATH: .
         run: |
@@ -29,6 +39,6 @@ jobs:
       - name: Upload comparison artifact
         uses: actions/upload-artifact@v4
         with:
-          name: fvg-90-depth-comparison
+          name: fvg-depth-comparison-${{ matrix.period }}
           path: backtest/fvg_90_depth_comparison.json
           if-no-files-found: error
