@@ -5,12 +5,12 @@ on:
       start_utc:
         description: "Separate historical validation window start UTC"
         required: true
-        default: "2026-07-27T00:00:00+00:00"
+        default: "2026-06-27T00:00:00+00:00"
         type: string
       end_utc:
         description: "Separate historical validation window end UTC"
         required: true
-        default: "2026-08-25T23:59:59+00:00"
+        default: "2026-07-26T23:59:59+00:00"
         type: string
 
 permissions:
