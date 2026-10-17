@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Research-only V8 Cap4 midpoint vs multiple FVG retracement-depth entries."""
+"""Research-only V8 Cap4 FVG entry-depth comparison with execution-cost sensitivity."""
 from __future__ import annotations
 
 import json
@@ -11,6 +11,7 @@ import scripts.fvg_executable_audit_v8 as v8
 RESULT = Path("backtest/fvg_executable_audit_v8_results.json")
 OUT = Path("backtest/fvg_90_depth_comparison.json")
 ORIGINAL_FVG_AT = v8.fvg_at
+COST_R_SCENARIOS = (0.05, 0.10, 0.20)
 
 
 def run_model(label: str, depth: float | None) -> dict:
@@ -26,7 +27,6 @@ def run_model(label: str, depth: float | None) -> dict:
             width = adjusted["hi"] - adjusted["lo"]
             if width <= 0:
                 return None
-            # Retracement depth is measured from the edge price returns from.
             if adjusted["direction"] == "BUY":
                 adjusted["mid"] = adjusted["hi"] - depth * width
             else:
@@ -39,7 +39,6 @@ def run_model(label: str, depth: float | None) -> dict:
     result = json.loads(RESULT.read_text(encoding="utf-8"))
     if result.get("status") != "COMPLETED":
         raise RuntimeError(f"{label}: status={result.get('status')}")
-
     invariants = result.get("invariants", {})
     if invariants.get("status") != "PASS" or invariants.get("errors"):
         raise RuntimeError(f"{label}: invariant failure: {invariants}")
@@ -47,19 +46,15 @@ def run_model(label: str, depth: float | None) -> dict:
     trades = result.get("trades", [])
     mismatches = []
     for index, trade in enumerate(trades):
-        lo, hi = trade.get("zone_lo"), trade.get("zone_hi")
-        entry = trade.get("entry")
+        lo, hi, entry = trade.get("zone_lo"), trade.get("zone_hi"), trade.get("entry")
         direction = trade.get("direction")
         if None in (lo, hi, entry) or hi <= lo:
             mismatches.append(f"TRADE_ZONE_MISSING:{index}")
             continue
         width = hi - lo
-        if depth is None:
-            expected = (lo + hi) / 2
-        elif direction == "BUY":
-            expected = hi - depth * width
-        else:
-            expected = lo + depth * width
+        expected = (lo + hi) / 2 if depth is None else (
+            hi - depth * width if direction == "BUY" else lo + depth * width
+        )
         if abs(float(entry) - round(expected, 3)) > 0.001:
             mismatches.append(f"ENTRY_LEVEL_MISMATCH:{index}")
     if mismatches:
@@ -75,15 +70,35 @@ def run_model(label: str, depth: float | None) -> dict:
 
 def summarize(result: dict) -> dict:
     overall = result["overall"]
+    trades = result["trades"]
+    raw_net = sum(
+        float(t.get("rr", 0)) if t.get("outcome") == "TP"
+        else -1.0 if t.get("outcome") == "SL"
+        else 0.0
+        for t in trades
+    )
+    n = len(trades)
+    sensitivity = {}
+    for cost_r in COST_R_SCENARIOS:
+        cost_total = n * cost_r
+        sensitivity[f"{cost_r:.2f}R_per_trade"] = {
+            "assumed_round_trip_cost_r_per_trade": cost_r,
+            "total_cost_r": round(cost_total, 2),
+            "net_r_after_cost": round(raw_net - cost_total, 2),
+            "conservative_net_r_after_cost": round(raw_net - sum(t.get("outcome") == "AMBIGUOUS" for t in trades) - cost_total, 2),
+        }
     return {
         "signals": overall["signals"],
         "tp": overall["tp"],
         "sl": overall["sl"],
         "ambiguous": overall["ambiguous"],
+        "open_at_data_end": overall.get("open_at_data_end", 0),
         "win_rate": overall["win_rate"],
-        "net_r": overall["net_r"],
-        "conservative_net_r": overall["conservative_net_r"],
+        "net_r_before_cost": overall["net_r"],
+        "conservative_net_r_before_cost": overall["conservative_net_r"],
         "avg_rr": overall["avg_rr"],
+        "break_even_round_trip_cost_r_per_trade": round(raw_net / n, 4) if n else None,
+        "cost_sensitivity": sensitivity,
         "invariants": result["invariants"],
         "entry_validation": result["_entry_validation"],
         "lifecycle": result["lifecycle"],
@@ -92,10 +107,7 @@ def summarize(result: dict) -> dict:
 
 def main() -> None:
     variants = [("midpoint", None), ("depth_70", 0.70), ("depth_80", 0.80), ("depth_90", 0.90)]
-    results = {}
-    for label, depth in variants:
-        results[label] = run_model(label.upper(), depth)
-
+    results = {label: run_model(label.upper(), depth) for label, depth in variants}
     baseline = results["midpoint"]["overall"]
     comparison = {}
     for label, _ in variants[1:]:
@@ -107,23 +119,19 @@ def main() -> None:
             "conservative_net_r_delta": round(current["conservative_net_r"] - baseline["conservative_net_r"], 2),
             "avg_rr_delta": round((current["avg_rr"] or 0) - (baseline["avg_rr"] or 0), 2),
         }
-
     payload = {
         "status": "COMPLETED",
         "research_only": True,
+        "execution_cost_method": "Sensitivity analysis deducting a fixed round-trip cost in R per signal; not a broker-specific spread/slippage estimate.",
+        "cost_r_scenarios_per_trade": list(COST_R_SCENARIOS),
         "definition": {
             "BUY": "entry = FVG high - depth * width",
             "SELL": "entry = FVG low + depth * width",
             "tested_depths": [70, 80, 90],
             "unchanged": [
-                "SL boundary plus/minus PAD",
-                "structural target capped at 4R",
-                "minimum RR 2.0",
-                "one active trade",
-                "no queue",
-                "no lookahead",
-                "exit after entry candle",
-                "same M5 data and validation window",
+                "SL boundary plus/minus PAD", "structural target capped at 4R",
+                "minimum RR 2.0", "one active trade", "no queue", "no lookahead",
+                "exit after entry candle", "same M5 data and validation window",
             ],
         },
         "source": os.getenv("COMBINED_SOURCE_URL"),
