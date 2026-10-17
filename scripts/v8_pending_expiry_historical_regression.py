@@ -24,14 +24,14 @@ def baseline_run_v8():
     # Fetch the baseline file from the remote main branch explicitly, since
     # it may not be part of the shallow checkout's local object database.
     raw = subprocess.check_output(
-        ["git", "show", "refs/remotes/origin/main:scripts/fvg_v8_live_dry_run.py"],
+        ["git", "show", "refs/remotes/origin/experiment-fvg-setups:scripts/fvg_v8_live_dry_run.py"],
         cwd=ROOT, text=True,
     )
     start = raw.index("def run_v8(")
     end = raw.index("\ndef merge_into_analysis", start)
     source = raw[start:end]
     namespace = dict(candidate.__dict__)
-    exec(compile(source, "<origin/main V8 baseline run_v8>", "exec"), namespace)
+    exec(compile(source, "<experiment-fvg-setups V8 baseline run_v8>", "exec"), namespace)
     return namespace["run_v8"]
 
 
