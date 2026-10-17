@@ -308,11 +308,11 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
                 if active is None:
                     continue
                 entry_hit = (
-                        c["low"] <= active["entry"]
-                        if active["direction"] == "BUY"
-                        else c["high"] >= active["entry"]
-                    )
-                    if entry_hit:
+                    c["low"] <= active["entry"]
+                    if active["direction"] == "BUY"
+                    else c["high"] >= active["entry"]
+                )
+                if entry_hit:
                         active["entry_activated"] = True
                         active["activation_time"] = c["openTime"]
                         if active_history is not None:
