@@ -22,11 +22,11 @@ from scripts import fvg_v8_live_dry_run as live
 
 def outcome_like_engine(age_minutes: float, technical_invalid: bool) -> str:
     """Mirror the actual run_v8 pending branch order, verified below."""
-    # Actual source checks technical_invalid before checking pending age.
-    if technical_invalid:
-        return "INVALIDATED"
+    # Candidate source checks pending age before candle-based invalidation.
     if age_minutes >= live.PENDING_ENTRY_MAX_MINUTES:
         return "EXPIRED"
+    if technical_invalid:
+        return "INVALIDATED"
     return "PENDING"
 
 
@@ -38,12 +38,12 @@ def main() -> None:
     invalid_idx = source.find("if technical_invalid:")
     age_idx = source.find("if pending_age_minutes >= PENDING_ENTRY_MAX_MINUTES:")
     assert invalid_idx >= 0 and age_idx >= 0, "Pending lifecycle branches not found"
-    assert invalid_idx < age_idx, (
-        "Live lifecycle order changed; review manually instead of assuming expected behavior"
+    assert age_idx < invalid_idx, (
+        "Candidate lifecycle must check timeout before technical invalidation"
     )
     print("PASS actual_live_module_imported: run_v8")
     print("PASS locked_pending_timeout: 60 minutes")
-    print("PASS source_order_verified: technical invalidation precedes timeout")
+    print("PASS source_order_verified: timeout precedes technical invalidation")
 
     scenarios = [
         ("before_deadline_invalidated", 55, True, "INVALIDATED"),
@@ -51,7 +51,7 @@ def main() -> None:
         ("after_deadline_no_invalidation", 90, False, "EXPIRED"),
         # Critical case: first available candle is after deadline and closes
         # beyond FVG boundary. Actual engine chooses invalidation due to order.
-        ("after_deadline_gap_with_invalidation", 90, True, "INVALIDATED"),
+        ("after_deadline_gap_with_invalidation", 90, True, "EXPIRED"),
         ("before_deadline_valid", 55, False, "PENDING"),
     ]
     for name, age, invalid, expected in scenarios:
@@ -59,9 +59,9 @@ def main() -> None:
         assert actual == expected, f"{name}: expected {expected}, got {actual}"
         print(f"PASS {name}: {actual}")
 
-    print("FINDING=after-deadline candle gap + technical invalidation yields INVALIDATED, not EXPIRED")
+    print("FINDING=candidate expires pending signal before evaluating late candle invalidation")
     print("LIMITATION=engine processes closed M5 candles; it has no independent wall-clock expiry callback")
-    print("SCOPE=read-only research audit; no live engine/dashboard/cron changes; auto-trade disabled")
+    print("SCOPE=candidate-branch audit only; production branch/dashboard/cron unchanged; auto-trade disabled")
 
 
 if __name__ == "__main__":
