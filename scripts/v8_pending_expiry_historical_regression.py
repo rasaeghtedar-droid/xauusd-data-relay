@@ -83,6 +83,17 @@ def main() -> None:
         if diffs:
             changed_resolved.append({"signal_key": key, "differences": diffs})
 
+    baseline_only_keys = sorted(set(base) - set(cand))
+    candidate_only_keys = sorted(set(cand) - set(base))
+    status_changes = []
+    for key in sorted(set(base) & set(cand)):
+        if base[key].get("status") != cand[key].get("status"):
+            status_changes.append({
+                "signal_key": key,
+                "baseline_status": base[key].get("status"),
+                "candidate_status": cand[key].get("status"),
+            })
+
     # Candidate must never return a still-pending signal whose deadline passed.
     deadline_violations = []
     for key, trade in cand.items():
@@ -119,6 +130,12 @@ def main() -> None:
         "last_m5": bars[-1].get("openTime"),
         "baseline_trade_records": len(base_trades),
         "candidate_trade_records": len(cand_trades),
+        "baseline_only_signal_count": len(baseline_only_keys),
+        "baseline_only_signals": baseline_only_keys[:20],
+        "candidate_only_signal_count": len(candidate_only_keys),
+        "candidate_only_signals": candidate_only_keys[:20],
+        "status_change_count": len(status_changes),
+        "status_changes": status_changes[:20],
         "shared_TP_SL_AMBIGUOUS_records_checked": len(shared_immutable),
         "changed_resolved_records": changed_resolved[:20],
         "changed_resolved_record_count": len(changed_resolved),
