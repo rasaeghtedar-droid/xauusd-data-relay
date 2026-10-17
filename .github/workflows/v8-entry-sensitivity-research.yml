@@ -73,6 +73,15 @@ jobs:
           python -m py_compile scripts/fvg_v8_live_dry_run.py scripts/v8_pending_expiry_engine_regression.py
           python scripts/v8_pending_expiry_engine_regression.py
 
+      - name: Compare candidate against main baseline on identical historical data
+        env:
+          COMBINED_SOURCE_URL: https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          python -m py_compile scripts/v8_pending_expiry_historical_regression.py
+          python scripts/v8_pending_expiry_historical_regression.py | tee /tmp/v8_pending_expiry_historical_regression.json
+
       - name: Run isolated sensitivity comparison
         env:
           FVG_ONLY_START_UTC: ${{ inputs.start_utc }}
