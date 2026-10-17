@@ -62,6 +62,9 @@ jobs:
       - name: Audit actual V8 pending lifecycle (read-only)
         run: python scripts/v8_live_pending_lifecycle_audit.py
 
+      - name: Test isolated pending expiry policy prototype
+        run: python scripts/v8_pending_expiry_policy_prototype.py
+
       - name: Run isolated sensitivity comparison
         env:
           FVG_ONLY_START_UTC: ${{ inputs.start_utc }}
