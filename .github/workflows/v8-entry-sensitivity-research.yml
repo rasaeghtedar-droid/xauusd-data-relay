@@ -23,7 +23,7 @@ jobs:
       - name: Checkout isolated V8 research branch
         uses: actions/checkout@v4
         with:
-          ref: experiment-fvg-setups
+          ref: experiment-pending-expiry-fix
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -67,6 +67,11 @@ jobs:
 
       - name: Test isolated wall-clock pending monitor prototype
         run: python scripts/v8_pending_wall_clock_monitor_prototype.py
+
+      - name: Compile candidate V8 engine and run pending-expiry regression tests
+        run: |
+          python -m py_compile scripts/fvg_v8_live_dry_run.py scripts/v8_pending_expiry_engine_regression.py
+          python scripts/v8_pending_expiry_engine_regression.py
 
       - name: Run isolated sensitivity comparison
         env:
