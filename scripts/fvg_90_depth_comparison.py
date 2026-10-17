@@ -16,6 +16,8 @@ COST_R_SCENARIOS = tuple(round(i / 100, 2) for i in range(0, 31))
 
 def run_model(label: str, depth: float | None) -> dict:
     """Run one entry variant and validate persisted entries against their zones."""
+    # Never allow a failed run to accidentally reuse a previous variant's result.
+    RESULT.unlink(missing_ok=True)
     v8.fvg_at = ORIGINAL_FVG_AT
 
     if depth is not None:
@@ -36,6 +38,8 @@ def run_model(label: str, depth: float | None) -> dict:
         v8.fvg_at = fvg_at_depth
 
     v8.main()
+    if not RESULT.exists():
+        raise RuntimeError(f"{label}: engine did not create a fresh result file")
     result = json.loads(RESULT.read_text(encoding="utf-8"))
     if result.get("status") != "COMPLETED":
         raise RuntimeError(f"{label}: status={result.get('status')}")
@@ -113,13 +117,13 @@ def summarize(result: dict) -> dict:
 def main() -> None:
     variants = [("midpoint", None), ("depth_70", 0.70), ("depth_80", 0.80), ("depth_90", 0.90)]
     results = {label: run_model(label.upper(), depth) for label, depth in variants}
-    baseline_raw, baseline_amb, baseline_n = raw_net_and_ambiguous(results["midpoint"])
-    depth70_raw, depth70_amb, depth70_n = raw_net_and_ambiguous(results["depth_70"])
+    baseline_raw, _, baseline_n = raw_net_and_ambiguous(results["midpoint"])
+    depth70_raw, _, depth70_n = raw_net_and_ambiguous(results["depth_70"])
 
     crossover = None
     if depth70_n != baseline_n:
-        # Equal cost is charged per signal; solve N70*(net70/N70 - c) = Nbase*(netbase/Nbase - c)
-        # Equivalent: raw_net70 - c*N70 = raw_netbase - c*Nbase.
+        # Cost is charged per signal; a negative crossover means depth 70 already
+        # leads at zero cost and its advantage grows as equal per-trade costs rise.
         crossover = round((depth70_raw - baseline_raw) / (depth70_n - baseline_n), 4)
 
     comparison = {}
