@@ -1,0 +1,33 @@
+name: FVG 90 Percent Depth Comparison
+on:
+  workflow_dispatch:
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout isolated experiment branch
+        uses: actions/checkout@v4
+        with:
+          ref: experiment-fvg-setups
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Run baseline versus 90-percent comparison
+        env:
+          FVG_ONLY_START_UTC: "2026-08-01T00:00:00+00:00"
+          FVG_ONLY_END_UTC: "2026-09-09T23:59:59+00:00"
+          COMBINED_SOURCE_URL: "https://raw.githubusercontent.com/getdata-finance/xauusd-5m-ohlcv-metals-historical-data/main/XAUUSD_5m.csv"
+        run: |
+          set -o pipefail
+          python scripts/fvg_90_depth_comparison.py | tee /tmp/fvg_90_depth_comparison_output.txt
+      - name: Upload comparison artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fvg-90-depth-comparison
+          path: backtest/fvg_90_depth_comparison.json
+          if-no-files-found: error
