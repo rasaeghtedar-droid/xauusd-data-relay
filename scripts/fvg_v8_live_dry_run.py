@@ -313,15 +313,15 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
                     else c["high"] >= active["entry"]
                 )
                 if entry_hit:
-                        active["entry_activated"] = True
-                        active["activation_time"] = c["openTime"]
-                        if active_history is not None:
-                            active_history["status"] = "ACTIVE"
-                            active_history["activation_time"] = c["openTime"]
-                    # If Entry was not touched, this signal remains pending and
-                    # the one-active-trade rule stays in force.
-                    if not active.get("entry_activated", False):
-                        continue
+                    active["entry_activated"] = True
+                    active["activation_time"] = c["openTime"]
+                    if active_history is not None:
+                        active_history["status"] = "ACTIVE"
+                        active_history["activation_time"] = c["openTime"]
+                # If Entry was not touched, this signal remains pending and
+                # the one-active-trade rule stays in force.
+                if not active.get("entry_activated", False):
+                    continue
             if active is not None:
                 sl_hit = (c["low"] <= active["sl"]) if active["direction"] == "BUY" else (c["high"] >= active["sl"])
                 tp_hit = (c["high"] >= active["tp"]) if active["direction"] == "BUY" else (c["low"] <= active["tp"])
