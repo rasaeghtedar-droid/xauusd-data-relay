@@ -65,6 +65,9 @@ jobs:
       - name: Test isolated pending expiry policy prototype
         run: python scripts/v8_pending_expiry_policy_prototype.py
 
+      - name: Test isolated wall-clock pending monitor prototype
+        run: python scripts/v8_pending_wall_clock_monitor_prototype.py
+
       - name: Run isolated sensitivity comparison
         env:
           FVG_ONLY_START_UTC: ${{ inputs.start_utc }}
