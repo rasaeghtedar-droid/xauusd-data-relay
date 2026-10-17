@@ -263,7 +263,7 @@ def run_v8(m5: list[dict]) -> tuple[dict | None, str, dict, dict | None]:
                         "rr": active["rr"],
                         "result_r": 0.0,
                         "activation_time": None,
-                        "exit_time": confirmation_dt.replace(tzinfo=timezone.utc).isoformat().replace("+00:00", "Z"),
+                        "exit_time": (confirmation_dt + timedelta(minutes=PENDING_ENTRY_MAX_MINUTES)).isoformat().replace("+00:00", "Z"),
                         "expiry_reason": "Entry not touched within 60 minutes",
                     }
                     if active_history is not None:
