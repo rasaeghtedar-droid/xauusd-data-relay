@@ -86,10 +86,13 @@ def main() -> None:
     print("PASS activated_signal_not_expired_by_pending_entry_timer")
 
     # Idempotency: once terminal, repeated polling cannot change the result.
+    s = PendingSignal(start)
+    poll_pending(s, start + timedelta(minutes=60), technical_invalid=False)
+    assert s.terminal_status == "EXPIRED"
     old_detected = s.terminal_detected_at
     poll_pending(s, start + timedelta(minutes=120), technical_invalid=True)
-    assert s.terminal_status is None and s.terminal_detected_at == old_detected
-    print("PASS repeated_poll_is_idempotent_for_nonterminal_activated_signal")
+    assert s.terminal_status == "EXPIRED" and s.terminal_detected_at == old_detected
+    print("PASS repeated_poll_does_not_change_terminal_expiry")
     print("PASS all 5 wall-clock monitor prototype tests")
     print("LIMIT=5-minute scheduler means expiry detection is not guaranteed at exact second")
     print("SCOPE=prototype only; live engine/dashboard/cron unchanged; auto-trade disabled")
