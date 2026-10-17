@@ -102,7 +102,30 @@ def main() -> None:
         assert history[0]["expiry_detection_delay_seconds"] == 300
         print("PASS delayed_poll_records_deadline_and_detection_delay")
 
-    print("PASS all 4 candidate engine regression tests")
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        history_path = root / "history.json"
+        active_path = root / "active.json"
+        write_json(history_path, [])
+        write_json(active_path, {
+            "status": "SIGNAL",
+            "signal_key": "BUY|orphan",
+            "signal": {
+                "direction": "BUY",
+                "confirmation_time": "2026-07-07T20:30:00Z",
+                "pending_expiry_minutes": 60,
+                "activation_time": None,
+            },
+        })
+        count = expire_persisted_pending_state(
+            history_path, active_path, now=deadline + timedelta(minutes=5)
+        )
+        state = json.loads(active_path.read_text())
+        assert count == 0
+        assert state["status"] == "NO TRADE"
+        print("PASS orphaned_expired_active_signal_is_cleared")
+
+    print("PASS all 5 candidate engine regression tests")
     print("SCOPE=candidate branch only; production branch unchanged; auto-trade disabled")
 
 
