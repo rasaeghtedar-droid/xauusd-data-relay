@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Research-only V8 Cap4 midpoint vs 90%-depth FVG entry comparison."""
+"""Research-only V8 Cap4 midpoint vs multiple FVG retracement-depth entries."""
 from __future__ import annotations
 
 import json
@@ -13,11 +13,11 @@ OUT = Path("backtest/fvg_90_depth_comparison.json")
 ORIGINAL_FVG_AT = v8.fvg_at
 
 
-def run_model(label: str, depth90: bool) -> dict:
-    """Run one variant and validate every persisted entry against its zone."""
+def run_model(label: str, depth: float | None) -> dict:
+    """Run one entry variant and validate persisted entries against their zones."""
     v8.fvg_at = ORIGINAL_FVG_AT
 
-    if depth90:
+    if depth is not None:
         def fvg_at_depth(candles, i):
             fvg = ORIGINAL_FVG_AT(candles, i)
             if not fvg:
@@ -26,12 +26,11 @@ def run_model(label: str, depth90: bool) -> dict:
             width = adjusted["hi"] - adjusted["lo"]
             if width <= 0:
                 return None
-            # A 90% retracement from the near edge: BUY descends from zone high;
-            # SELL ascends from zone low. The engine consumes this value as mid.
+            # Retracement depth is measured from the edge price returns from.
             if adjusted["direction"] == "BUY":
-                adjusted["mid"] = adjusted["hi"] - 0.90 * width
+                adjusted["mid"] = adjusted["hi"] - depth * width
             else:
-                adjusted["mid"] = adjusted["lo"] + 0.90 * width
+                adjusted["mid"] = adjusted["lo"] + depth * width
             return adjusted
 
         v8.fvg_at = fvg_at_depth
@@ -55,10 +54,12 @@ def run_model(label: str, depth90: bool) -> dict:
             mismatches.append(f"TRADE_ZONE_MISSING:{index}")
             continue
         width = hi - lo
-        if depth90:
-            expected = hi - 0.90 * width if direction == "BUY" else lo + 0.90 * width
-        else:
+        if depth is None:
             expected = (lo + hi) / 2
+        elif direction == "BUY":
+            expected = hi - depth * width
+        else:
+            expected = lo + depth * width
         if abs(float(entry) - round(expected, 3)) > 0.001:
             mismatches.append(f"ENTRY_LEVEL_MISMATCH:{index}")
     if mismatches:
@@ -67,22 +68,53 @@ def run_model(label: str, depth90: bool) -> dict:
     result["_entry_validation"] = {
         "status": "PASS",
         "trades_checked": len(trades),
-        "entry_definition": "90%-depth" if depth90 else "midpoint",
+        "entry_definition": "midpoint" if depth is None else f"{int(depth * 100)}%-depth",
     }
     return result
 
 
+def summarize(result: dict) -> dict:
+    overall = result["overall"]
+    return {
+        "signals": overall["signals"],
+        "tp": overall["tp"],
+        "sl": overall["sl"],
+        "ambiguous": overall["ambiguous"],
+        "win_rate": overall["win_rate"],
+        "net_r": overall["net_r"],
+        "conservative_net_r": overall["conservative_net_r"],
+        "avg_rr": overall["avg_rr"],
+        "invariants": result["invariants"],
+        "entry_validation": result["_entry_validation"],
+        "lifecycle": result["lifecycle"],
+    }
+
+
 def main() -> None:
-    baseline = run_model("BASELINE_MIDPOINT", False)
-    depth = run_model("FVG_90_PERCENT_DEPTH", True)
-    b, d = baseline["overall"], depth["overall"]
+    variants = [("midpoint", None), ("depth_70", 0.70), ("depth_80", 0.80), ("depth_90", 0.90)]
+    results = {}
+    for label, depth in variants:
+        results[label] = run_model(label.upper(), depth)
+
+    baseline = results["midpoint"]["overall"]
+    comparison = {}
+    for label, _ in variants[1:]:
+        current = results[label]["overall"]
+        comparison[label] = {
+            "signals_delta": current["signals"] - baseline["signals"],
+            "win_rate_percentage_points_delta": round((current["win_rate"] or 0) - (baseline["win_rate"] or 0), 2),
+            "net_r_delta": round(current["net_r"] - baseline["net_r"], 2),
+            "conservative_net_r_delta": round(current["conservative_net_r"] - baseline["conservative_net_r"], 2),
+            "avg_rr_delta": round((current["avg_rr"] or 0) - (baseline["avg_rr"] or 0), 2),
+        }
 
     payload = {
         "status": "COMPLETED",
         "research_only": True,
         "definition": {
-            "BUY": "entry = FVG high - 0.90 * width",
-            "SELL": "entry = FVG low + 0.90 * width",
+            "BUY": "entry = FVG high - depth * width",
+            "SELL": "entry = FVG low + depth * width",
+            "tested_depths": [70, 80, 90],
             "unchanged": [
                 "SL boundary plus/minus PAD",
                 "structural target capped at 4R",
@@ -97,27 +129,10 @@ def main() -> None:
         "source": os.getenv("COMBINED_SOURCE_URL"),
         "validation_start_utc": os.getenv("FVG_ONLY_START_UTC"),
         "validation_end_utc": os.getenv("FVG_ONLY_END_UTC"),
-        "baseline": {
-            "overall": b,
-            "lifecycle": baseline["lifecycle"],
-            "invariants": baseline["invariants"],
-            "entry_validation": baseline["_entry_validation"],
-        },
-        "fvg_90_depth": {
-            "overall": d,
-            "lifecycle": depth["lifecycle"],
-            "invariants": depth["invariants"],
-            "entry_validation": depth["_entry_validation"],
-        },
-        "delta_90_minus_baseline": {
-            "signals": d["signals"] - b["signals"],
-            "win_rate_percentage_points": round((d["win_rate"] or 0) - (b["win_rate"] or 0), 2),
-            "net_r": round(d["net_r"] - b["net_r"], 2),
-            "conservative_net_r": round(d["conservative_net_r"] - b["conservative_net_r"], 2),
-            "avg_rr": round((d["avg_rr"] or 0) - (b["avg_rr"] or 0), 2),
-        },
-        "trades": {"baseline": baseline["trades"], "fvg_90_depth": depth["trades"]},
-        "decision_note": "Research only; do not merge into main without review.",
+        "results": {label: summarize(result) for label, result in results.items()},
+        "delta_vs_midpoint": comparison,
+        "trades": {label: result["trades"] for label, result in results.items()},
+        "decision_note": "Research only; do not merge any entry change into main without separate review.",
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(payload, indent=2), encoding="utf-8")
