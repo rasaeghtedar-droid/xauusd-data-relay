@@ -85,6 +85,23 @@ def main() -> None:
 
     baseline_only_keys = sorted(set(base) - set(cand))
     candidate_only_keys = sorted(set(cand) - set(base))
+    def compact_record(trade: dict) -> dict:
+        fields = (
+            "signal_key", "direction", "confirmation_time", "status",
+            "activation_time", "exit_time", "result_r", "entry", "sl", "tp",
+            "invalidation_reason", "reason", "pending_expiry_minutes",
+        )
+        return {field: trade.get(field) for field in fields if field in trade}
+
+    baseline_only_details = [
+        {"signal_key": key, **compact_record(base[key])}
+        for key in baseline_only_keys
+    ]
+    candidate_only_details = [
+        {"signal_key": key, **compact_record(cand[key])}
+        for key in candidate_only_keys
+    ]
+
     status_changes = []
     for key in sorted(set(base) & set(cand)):
         if base[key].get("status") != cand[key].get("status"):
@@ -131,9 +148,9 @@ def main() -> None:
         "baseline_trade_records": len(base_trades),
         "candidate_trade_records": len(cand_trades),
         "baseline_only_signal_count": len(baseline_only_keys),
-        "baseline_only_signals": baseline_only_keys[:20],
+        "baseline_only_signals": baseline_only_details[:20],
         "candidate_only_signal_count": len(candidate_only_keys),
-        "candidate_only_signals": candidate_only_keys[:20],
+        "candidate_only_signals": candidate_only_details[:20],
         "status_change_count": len(status_changes),
         "status_changes": status_changes[:20],
         "shared_TP_SL_AMBIGUOUS_records_checked": len(shared_immutable),
