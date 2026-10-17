@@ -19,10 +19,10 @@ from scripts import fvg_v8_live_dry_run as candidate
 from scripts.fvg_only_gold_hunter_backtest import load, pt
 
 
-def baseline_run_v8():
-    # GitHub Actions checks out the candidate branch into the workspace.
-    # Fetch the baseline file from the remote main branch explicitly, since
-    # it may not be part of the shallow checkout's local object database.
+def build_replay_function(expiry_first: bool = False):
+    # Use the exact same pre-fix V8 engine source for both runs. The candidate
+    # differs by one isolated policy change only: at/after the 60-minute
+    # deadline, EXPIRED wins over a technical invalidation on the late candle.
     raw = subprocess.check_output(
         ["git", "show", "refs/remotes/origin/experiment-fvg-setups:scripts/fvg_v8_live_dry_run.py"],
         cwd=ROOT, text=True,
@@ -30,8 +30,87 @@ def baseline_run_v8():
     start = raw.index("def run_v8(")
     end = raw.index("\ndef merge_into_analysis", start)
     source = raw[start:end]
+
+    if expiry_first:
+        block_start = source.index('            if not active.get("entry_activated", False):')
+        block_end = source.index('            if active is not None:\n                sl_hit =', block_start)
+        isolated_block = '''            if not active.get("entry_activated", False):
+                confirmation_dt = pt(active["confirmation_time"])
+                current_dt = pt(c["openTime"])
+                pending_age_minutes = (current_dt - confirmation_dt).total_seconds() / 60.0
+
+                # Isolated candidate policy: deadline takes priority at/after 60m.
+                if pending_age_minutes >= PENDING_ENTRY_MAX_MINUTES:
+                    latest_result = {
+                        "status": "EXPIRED",
+                        "icon": "⌛",
+                        "signal_key": f'{active["direction"]}|{active["confirmation_time"]}',
+                        "direction": active["direction"],
+                        "entry": active["entry"],
+                        "sl": active["sl"],
+                        "tp": active["tp"],
+                        "rr": active["rr"],
+                        "result_r": 0.0,
+                        "activation_time": None,
+                        "exit_time": c["openTime"],
+                        "expiry_reason": "Entry not touched within 60 minutes",
+                    }
+                    if active_history is not None:
+                        active_history.update(latest_result)
+                        trade_history.append(dict(active_history))
+                    else:
+                        trade_history.append(dict(latest_result))
+                    active = None
+                    active_history = None
+                else:
+                    technical_invalid = (
+                        c["close"] < active["zone_lo"]
+                        if active["direction"] == "BUY"
+                        else c["close"] > active["zone_hi"]
+                    )
+                    if technical_invalid:
+                        latest_result = {
+                            "status": "INVALIDATED",
+                            "icon": "⚠️",
+                            "signal_key": f'{active["direction"]}|{active["confirmation_time"]}',
+                            "direction": active["direction"],
+                            "entry": active["entry"],
+                            "sl": active["sl"],
+                            "tp": active["tp"],
+                            "rr": active["rr"],
+                            "result_r": 0.0,
+                            "activation_time": None,
+                            "exit_time": c["openTime"],
+                            "expiry_reason": "technical invalidation: closed M5 candle crossed the FVG boundary",
+                        }
+                        if active_history is not None:
+                            active_history.update(latest_result)
+                            trade_history.append(dict(active_history))
+                        else:
+                            trade_history.append(dict(latest_result))
+                        active = None
+                        active_history = None
+                        continue
+
+                    entry_hit = (
+                        c["low"] <= active["entry"]
+                        if active["direction"] == "BUY"
+                        else c["high"] >= active["entry"]
+                    )
+                    if entry_hit:
+                        active["entry_activated"] = True
+                        active["activation_time"] = c["openTime"]
+                        if active_history is not None:
+                            active_history["status"] = "ACTIVE"
+                            active_history["activation_time"] = c["openTime"]
+                    if not active.get("entry_activated", False):
+                        continue
+'''
+        source = source[:block_start] + isolated_block + source[block_end:]
+
     namespace = dict(candidate.__dict__)
-    exec(compile(source, "<experiment-fvg-setups V8 baseline run_v8>", "exec"), namespace)
+    label = "isolated expiry-first policy" if expiry_first else "baseline V8"
+    exec(compile(source, f"<{label} run_v8>", "exec"), namespace)
     return namespace["run_v8"]
 
 
@@ -59,8 +138,8 @@ def main() -> None:
     bars = load()
     if len(bars) < 5000:
         raise RuntimeError(f"Insufficient historical bars: {len(bars)}")
-    baseline_fn = baseline_run_v8()
-    candidate_fn = candidate.run_v8
+    baseline_fn = build_replay_function(expiry_first=False)
+    candidate_fn = build_replay_function(expiry_first=True)
 
     _, _, base_meta, _, base_trades = baseline_fn(bars)
     _, _, cand_meta, _, cand_trades = candidate_fn(bars)
