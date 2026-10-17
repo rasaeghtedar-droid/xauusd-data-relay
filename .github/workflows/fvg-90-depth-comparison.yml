@@ -14,6 +14,9 @@ jobs:
           - period: second-half
             start_utc: "2026-08-21T00:00:00+00:00"
             end_utc: "2026-09-09T23:59:59+00:00"
+          - period: unseen-oos
+            start_utc: "2026-09-10T00:00:00+00:00"
+            end_utc: "2026-10-16T23:59:59+00:00"
     steps:
       - name: Checkout isolated experiment branch
         uses: actions/checkout@v4
