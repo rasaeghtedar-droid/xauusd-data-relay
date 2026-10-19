@@ -1,0 +1,53 @@
+name: FVG 70 Live Shadow Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_shadow_only:
+        description: 'Confirm this is an isolated shadow test (no real orders)'
+        required: true
+        type: choice
+        options:
+          - 'YES - SHADOW ONLY'
+        default: 'YES - SHADOW ONLY'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fvg-70-live-shadow
+  cancel-in-progress: false
+
+jobs:
+  shadow-test:
+    if: ${{ github.event.inputs.confirm_shadow_only == 'YES - SHADOW ONLY' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout isolated test branch
+        uses: actions/checkout@v4
+        with:
+          ref: fvg-70-live-shadow
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pandas requests PyYAML
+      - name: Run isolated FVG 70 shadow test
+        env:
+          PYTHONUNBUFFERED: '1'
+        run: python scripts/fvg_70_live_shadow.py
+      - name: Upload shadow artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fvg-70-live-shadow
+          path: |
+            data/fvg_70_live_shadow*.json
+            data/fvg_70_live_shadow*.csv
+          if-no-files-found: warn
+          retention-days: 14
