@@ -126,16 +126,10 @@ def main():
     m5, diagnostics = load_comparison_bars()
     latest = m5[-1]["openTime"]
     age = live.freshness_minutes(latest)
-    if age > live.FRESHNESS_MINUTES:
-        payload = {
-            "status": "DATA_STALE", "fetched_at_utc": fetched_at,
-            "latest_closed_m5": live.m5_close_time(latest).isoformat().replace("+00:00", "Z"),
-            "freshness_minutes": round(age, 2), "api_diagnostics": diagnostics,
-            "note": "Same-candle comparison skipped because the latest closed M5 data is stale."
-        }
-        OUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        print(json.dumps(payload, ensure_ascii=False, indent=2))
-        return
+    freshness_status = "FRESH" if age <= live.FRESHNESS_MINUTES else "STALE_CURRENT_MARKET_DATA"
+    # This is a historical comparison, so still replay valid closed candles when
+    # the market is closed or the latest candle is old. Freshness is reported,
+    # not used to discard a useful historical sample.
     results = {}
     all_rows = []
     for depth in DEPTHS:
@@ -154,6 +148,7 @@ def main():
         "source": diagnostics.get("source", "Biquote closed XAUUSD M5 OHLC"),
         "latest_closed_m5": live.m5_close_time(latest).isoformat().replace("+00:00", "Z"),
         "freshness_minutes": round(age, 2),
+        "current_data_freshness": freshness_status,
         "api_diagnostics": diagnostics,
         "data_window": {"m5_closed": len(m5), "first_m5_open_time": m5[0]["openTime"], "last_m5_open_time": latest, "target_window": "up to 1000 accumulated closed M5 candles"},
         "assumptions": {
