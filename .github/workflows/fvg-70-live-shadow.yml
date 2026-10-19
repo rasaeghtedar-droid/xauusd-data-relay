@@ -12,7 +12,7 @@ on:
         default: 'YES - SHADOW ONLY'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: fvg-70-live-shadow
@@ -44,9 +44,22 @@ jobs:
             https://raw.githubusercontent.com/rasaeghtedar-droid/xauusd-data-relay/main/data/xauusd_analysis.json \
             -o data/_relay_xauusd_analysis.json
       - name: Run same-candle 50% vs 70% comparison
+        id: compare
         env:
           PYTHONUNBUFFERED: '1'
         run: python scripts/fvg_depth_shadow_comparison.py
+      - name: Persist isolated shadow candle history
+        if: steps.compare.outcome == 'success'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/fvg_depth_shadow_candles.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Update isolated FVG depth shadow candle history'
+            git push origin HEAD:fvg-70-live-shadow
+          else
+            echo 'No shadow candle history changes to persist.'
+          fi
       - name: Run isolated 70% live shadow payload
         if: always()
         env:
@@ -60,6 +73,7 @@ jobs:
           path: |
             data/fvg_depth_shadow_comparison.json
             data/fvg_depth_shadow_comparison.csv
+            data/fvg_depth_shadow_candles.json
             data/fvg_70_live_shadow.json
             data/fvg_70_live_shadow_history.json
           if-no-files-found: warn
