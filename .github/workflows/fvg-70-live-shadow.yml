@@ -1,0 +1,38 @@
+name: FVG 70 Live Shadow Test
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/5 * * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fvg-70-live-shadow
+  cancel-in-progress: true
+
+jobs:
+  shadow-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout isolated 70% test branch
+        uses: actions/checkout@v4
+        with:
+          ref: fvg-70-live-shadow
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run isolated 70% live shadow model
+        run: |
+          set -euo pipefail
+          python scripts/fvg_70_live_shadow.py | tee /tmp/fvg_70_live_shadow.log
+      - name: Upload shadow payload
+        uses: actions/upload-artifact@v4
+        with:
+          name: fvg-70-live-shadow
+          path: data/fvg_70_live_shadow.json
+          if-no-files-found: error
+          retention-days: 14
