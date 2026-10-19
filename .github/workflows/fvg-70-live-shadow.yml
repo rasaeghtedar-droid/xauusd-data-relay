@@ -37,6 +37,12 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           pip install pandas requests PyYAML
+      - name: Fetch accumulated relay candle history (read-only)
+        run: |
+          mkdir -p data
+          curl --fail --silent --show-error --location \
+            https://raw.githubusercontent.com/rasaeghtedar-droid/xauusd-data-relay/main/data/xauusd_analysis.json \
+            -o data/_relay_xauusd_analysis.json
       - name: Run same-candle 50% vs 70% comparison
         env:
           PYTHONUNBUFFERED: '1'
