@@ -5,7 +5,7 @@ Never sends orders, never writes the production dashboard payload, and never sen
 from __future__ import annotations
 import json
 from pathlib import Path
-import scripts.fvg_v8_live_dry_run as live
+import fvg_v8_live_dry_run as live
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "data" / "fvg_70_live_shadow.json"
