@@ -37,17 +37,24 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           pip install pandas requests PyYAML
-      - name: Run isolated FVG 70 shadow test
+      - name: Run same-candle 50% vs 70% comparison
+        env:
+          PYTHONUNBUFFERED: '1'
+        run: python scripts/fvg_depth_shadow_comparison.py
+      - name: Run isolated 70% live shadow payload
+        if: always()
         env:
           PYTHONUNBUFFERED: '1'
         run: python scripts/fvg_70_live_shadow.py
-      - name: Upload shadow artifact
+      - name: Upload shadow artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: fvg-70-live-shadow
+          name: fvg-depth-shadow-comparison
           path: |
-            data/fvg_70_live_shadow*.json
-            data/fvg_70_live_shadow*.csv
+            data/fvg_depth_shadow_comparison.json
+            data/fvg_depth_shadow_comparison.csv
+            data/fvg_70_live_shadow.json
+            data/fvg_70_live_shadow_history.json
           if-no-files-found: warn
           retention-days: 14
