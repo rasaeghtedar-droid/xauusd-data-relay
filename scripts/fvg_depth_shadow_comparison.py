@@ -14,33 +14,50 @@ CSV_OUT = ROOT / "data" / "fvg_depth_shadow_comparison.csv"
 SPREAD = 0.42
 DEPTHS = (0.50, 0.70)
 RELAY_CACHE = ROOT / "data" / "_relay_xauusd_analysis.json"
+PERSISTENT_BARS = ROOT / "data" / "fvg_depth_shadow_candles.json"
+MAX_PERSISTENT_BARS = 10000
 ORIGINAL_FVG_AT = live.fvg_at
 
 def load_comparison_bars():
-    """Prefer the main relay's accumulated closed-M5 history (up to 1000 bars).
-    Fall back to the live API only if the cached relay data is missing/invalid.
-    """
+    """Merge latest relay candles into a persistent, isolated shadow-test history."""
+    by_time = {}
+    persistence_note = "persistent shadow candle store"
+    if PERSISTENT_BARS.exists():
+        try:
+            saved = json.loads(PERSISTENT_BARS.read_text(encoding="utf-8"))
+            for b in saved.get("bars", []):
+                if b.get("openTime"):
+                    by_time[str(b["openTime"])] = {"openTime": str(b["openTime"]), "open": float(b["open"]), "high": float(b["high"]), "low": float(b["low"]), "close": float(b["close"])}
+        except (OSError, ValueError, TypeError, KeyError):
+            persistence_note = "persistent store unreadable; rebuilt from available relay history"
+            by_time = {}
+    relay_fetched_at = None
+    relay_count = 0
     if RELAY_CACHE.exists():
         try:
             obj = json.loads(RELAY_CACHE.read_text(encoding="utf-8"))
+            relay_fetched_at = obj.get("fetchedAt")
             raw = obj.get("intervals", {}).get("5m", {}).get("bars", [])
-            bars = [
-                {"openTime": str(b["openTime"]), "open": float(b["open"]),
-                 "high": float(b["high"]), "low": float(b["low"]), "close": float(b["close"])}
-                for b in raw if b.get("openTime") and b.get("isOpen") is False
-            ]
-            bars.sort(key=lambda b: b["openTime"])
-            if len(bars) >= 100 and bars[-1]["openTime"]:
-                return bars[-1000:], {
-                    "source": "main relay accumulated history",
-                    "relay_fetched_at": obj.get("fetchedAt"),
-                    "closed_bar_count": len(bars[-1000:]),
-                    "latest_closed_open_time": bars[-1]["openTime"],
-                }
+            for b in raw:
+                if b.get("openTime") and b.get("isOpen") is False:
+                    by_time[str(b["openTime"])] = {"openTime": str(b["openTime"]), "open": float(b["open"]), "high": float(b["high"]), "low": float(b["low"]), "close": float(b["close"])}
+                    relay_count += 1
         except (OSError, ValueError, TypeError, KeyError):
             pass
-    bars, diagnostics = live.fetch_closed_m5()
-    diagnostics["source"] = "Biquote API fallback (rolling window)"
+    if len(by_time) < 100:
+        try:
+            api_bars, api_diag = live.fetch_closed_m5()
+            for b in api_bars:
+                if b.get("openTime"):
+                    by_time[str(b["openTime"])] = {"openTime": str(b["openTime"]), "open": float(b["open"]), "high": float(b["high"]), "low": float(b["low"]), "close": float(b["close"])}
+        except Exception:
+            pass
+    bars = sorted(by_time.values(), key=lambda b: b["openTime"])[-MAX_PERSISTENT_BARS:]
+    if len(bars) < 100:
+        raise RuntimeError(f"Insufficient closed M5 bars for shadow comparison: {len(bars)}")
+    PERSISTENT_BARS.parent.mkdir(parents=True, exist_ok=True)
+    PERSISTENT_BARS.write_text(json.dumps({"schema_version": 1, "purpose": "isolated FVG 50% vs 70% shadow comparison only", "updated_at_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"), "bar_count": len(bars), "max_bars": MAX_PERSISTENT_BARS, "bars": bars}, ensure_ascii=False, separators=(",", ":")) + "\\n", encoding="utf-8")
+    diagnostics = {"source": "persistent shadow history + latest main relay closed M5 bars", "relay_fetched_at": relay_fetched_at, "relay_bars_merged_this_run": relay_count, "persistent_history_bars": len(bars), "first_persisted_bar": bars[0]["openTime"], "latest_closed_open_time": bars[-1]["openTime"], "persistent_store": str(PERSISTENT_BARS.relative_to(ROOT)), "persistence_note": persistence_note}
     return bars, diagnostics
 
 def fvg_at_depth(depth):
@@ -150,7 +167,7 @@ def main():
         "freshness_minutes": round(age, 2),
         "current_data_freshness": freshness_status,
         "api_diagnostics": diagnostics,
-        "data_window": {"m5_closed": len(m5), "first_m5_open_time": m5[0]["openTime"], "last_m5_open_time": latest, "target_window": "up to 1000 accumulated closed M5 candles"},
+        "data_window": {"m5_closed": len(m5), "first_m5_open_time": m5[0]["openTime"], "last_m5_open_time": latest, "target_window": f"persistent history up to {MAX_PERSISTENT_BARS} closed M5 candles", "persistent_history_bars": len(m5)},
         "assumptions": {
             "depths_compared": [0.50, 0.70],
             "spread_price_units": SPREAD,
