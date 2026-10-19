@@ -5,6 +5,7 @@ import csv
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+import urllib.request
 import fvg_v8_live_dry_run as live
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,7 +13,35 @@ OUT = ROOT / "data" / "fvg_depth_shadow_comparison.json"
 CSV_OUT = ROOT / "data" / "fvg_depth_shadow_comparison.csv"
 SPREAD = 0.42
 DEPTHS = (0.50, 0.70)
+RELAY_CACHE = ROOT / "data" / "_relay_xauusd_analysis.json"
 ORIGINAL_FVG_AT = live.fvg_at
+
+def load_comparison_bars():
+    """Prefer the main relay's accumulated closed-M5 history (up to 1000 bars).
+    Fall back to the live API only if the cached relay data is missing/invalid.
+    """
+    if RELAY_CACHE.exists():
+        try:
+            obj = json.loads(RELAY_CACHE.read_text(encoding="utf-8"))
+            raw = obj.get("intervals", {}).get("5m", {}).get("bars", [])
+            bars = [
+                {"openTime": str(b["openTime"]), "open": float(b["open"]),
+                 "high": float(b["high"]), "low": float(b["low"]), "close": float(b["close"])}
+                for b in raw if b.get("openTime") and b.get("isOpen") is False
+            ]
+            bars.sort(key=lambda b: b["openTime"])
+            if len(bars) >= 100 and bars[-1]["openTime"]:
+                return bars[-1000:], {
+                    "source": "main relay accumulated history",
+                    "relay_fetched_at": obj.get("fetchedAt"),
+                    "closed_bar_count": len(bars[-1000:]),
+                    "latest_closed_open_time": bars[-1]["openTime"],
+                }
+        except (OSError, ValueError, TypeError, KeyError):
+            pass
+    bars, diagnostics = live.fetch_closed_m5()
+    diagnostics["source"] = "Biquote API fallback (rolling window)"
+    return bars, diagnostics
 
 def fvg_at_depth(depth):
     def patched(candles, i):
@@ -94,7 +123,7 @@ def summarize(depth, signal, reason, meta, result, records, bars):
 
 def main():
     fetched_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    m5, diagnostics = live.fetch_closed_m5()
+    m5, diagnostics = load_comparison_bars()
     latest = m5[-1]["openTime"]
     age = live.freshness_minutes(latest)
     if age > live.FRESHNESS_MINUTES:
@@ -122,11 +151,11 @@ def main():
         "status": "OK",
         "test_mode": "ISOLATED_SAME_CANDLE_DEPTH_COMPARISON",
         "fetched_at_utc": fetched_at,
-        "source": "Biquote closed XAUUSD M5 OHLC",
+        "source": diagnostics.get("source", "Biquote closed XAUUSD M5 OHLC"),
         "latest_closed_m5": live.m5_close_time(latest).isoformat().replace("+00:00", "Z"),
         "freshness_minutes": round(age, 2),
         "api_diagnostics": diagnostics,
-        "data_window": {"m5_closed": len(m5), "first_m5_open_time": m5[0]["openTime"], "last_m5_open_time": latest},
+        "data_window": {"m5_closed": len(m5), "first_m5_open_time": m5[0]["openTime"], "last_m5_open_time": latest, "target_window": "up to 1000 accumulated closed M5 candles"},
         "assumptions": {
             "depths_compared": [0.50, 0.70],
             "spread_price_units": SPREAD,
