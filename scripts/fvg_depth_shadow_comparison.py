@@ -56,7 +56,7 @@ def load_comparison_bars():
     if len(bars) < 100:
         raise RuntimeError(f"Insufficient closed M5 bars for shadow comparison: {len(bars)}")
     PERSISTENT_BARS.parent.mkdir(parents=True, exist_ok=True)
-    PERSISTENT_BARS.write_text(json.dumps({"schema_version": 1, "purpose": "isolated FVG 50% vs 70% shadow comparison only", "updated_at_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"), "bar_count": len(bars), "max_bars": MAX_PERSISTENT_BARS, "bars": bars}, ensure_ascii=False, separators=(",", ":")) + "\\n", encoding="utf-8")
+    PERSISTENT_BARS.write_text(json.dumps({"schema_version": 1, "purpose": "isolated FVG 50% vs 70% shadow comparison only", "updated_at_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"), "bar_count": len(bars), "max_bars": MAX_PERSISTENT_BARS, "bars": bars}, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
     diagnostics = {"source": "persistent shadow history + latest main relay closed M5 bars", "relay_fetched_at": relay_fetched_at, "relay_bars_merged_this_run": relay_count, "persistent_history_bars": len(bars), "first_persisted_bar": bars[0]["openTime"], "latest_closed_open_time": bars[-1]["openTime"], "persistent_store": str(PERSISTENT_BARS.relative_to(ROOT)), "persistence_note": persistence_note}
     return bars, diagnostics
 
