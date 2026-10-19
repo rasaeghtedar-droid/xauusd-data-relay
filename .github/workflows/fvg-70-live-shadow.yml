@@ -1,6 +1,8 @@
 name: FVG 70 Live Shadow Test
 
 on:
+  schedule:
+    - cron: '*/5 * * * *'
   workflow_dispatch:
     inputs:
       confirm_shadow_only:
@@ -20,7 +22,7 @@ concurrency:
 
 jobs:
   shadow-test:
-    if: ${{ github.event.inputs.confirm_shadow_only == 'YES - SHADOW ONLY' }}
+    if: ${{ github.event_name == 'schedule' || github.event.inputs.confirm_shadow_only == 'YES - SHADOW ONLY' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
