@@ -2,7 +2,7 @@ name: FVG 70 Live Shadow Test
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '7,22,37,52 * * * *'
   workflow_dispatch:
     inputs:
       confirm_shadow_only:
