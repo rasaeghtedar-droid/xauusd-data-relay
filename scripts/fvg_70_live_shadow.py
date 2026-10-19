@@ -4,6 +4,7 @@ Never sends orders, never writes the production dashboard payload, and never sen
 """
 from __future__ import annotations
 import json
+from datetime import timedelta
 from pathlib import Path
 import fvg_v8_live_dry_run as live
 
@@ -20,6 +21,7 @@ ORIGINAL_FVG_AT = live.fvg_at
 ORIGINAL_RUN_V8 = live.run_v8
 DEPTH = 0.70
 ASSUMED_SPREAD = 0.42
+PENDING_MAX_MINUTES = 60
 CAPTURE = {}
 
 def fvg_at_70(candles, i):
@@ -30,7 +32,6 @@ def fvg_at_70(candles, i):
     width = float(adjusted["hi"]) - float(adjusted["lo"])
     if width <= 0:
         return None
-    # Direction-aware 70% retracement from the FVG's near edge.
     adjusted["mid"] = (
         float(adjusted["hi"]) - DEPTH * width
         if adjusted["direction"] == "BUY"
@@ -58,32 +59,50 @@ payload["telegram_sent"] = False
 payload["production_dashboard_modified"] = False
 payload["shadow_replay_meta"] = CAPTURE.get("replay_meta", {})
 payload["spread_model_note"] = (
-    "0.42 price units treated as estimated round-trip spread cost. "
+    "0.42 price units treated as estimated round-trip spread cost for entry-activated trades only. "
     "OHLC bars cannot verify Bid/Ask fills; this is not a broker-execution simulation."
 )
 
-# Build an isolated replay ledger from this run's own 70%-depth candle replay.
-# This intentionally does not depend on persisted production history/state.
 history = []
 for original in CAPTURE.get("replay_history", []):
     item = dict(original)
-    entry = item.get("entry")
-    sl = item.get("sl")
-    direction = item.get("direction")
-    try:
-        risk = float(entry) - float(sl) if direction == "BUY" else float(sl) - float(entry)
-    except (TypeError, ValueError):
-        risk = 0.0
-    spread_r = ASSUMED_SPREAD / risk if risk > 0 else None
+    status = str(item.get("status", ""))
+    entry_activated = bool(item.get("activation_time"))
+    # Expiry is a time-based cancellation, not an executed trade. If the next
+    # available bar is after a market closure/gap, record the actual deadline.
+    if status == "EXPIRED":
+        confirmation = item.get("confirmation_time")
+        if confirmation:
+            try:
+                confirmed_at = live.pt(confirmation)
+                item["expiry_deadline"] = (confirmed_at + timedelta(minutes=PENDING_MAX_MINUTES)).isoformat().replace("+00:00", "Z")
+                item["exit_time"] = item["expiry_deadline"]
+            except (TypeError, ValueError):
+                pass
+        item["spread_cost_r_estimate"] = 0.0
+        item["estimated_net_r_after_spread"] = 0.0
+        item["spread_charged"] = False
+    else:
+        entry = item.get("entry")
+        sl = item.get("sl")
+        direction = item.get("direction")
+        try:
+            risk = float(entry) - float(sl) if direction == "BUY" else float(sl) - float(entry)
+        except (TypeError, ValueError):
+            risk = 0.0
+        # Only charge spread if Entry was actually touched. Non-activated
+        # pending/invalidation records are not fills.
+        spread_r = ASSUMED_SPREAD / risk if risk > 0 and entry_activated else 0.0
+        item["spread_cost_r_estimate"] = round(spread_r, 4) if entry_activated else 0.0
+        result_r = item.get("result_r")
+        item["estimated_net_r_after_spread"] = (
+            round(float(result_r) - spread_r, 4)
+            if result_r is not None and entry_activated
+            else (0.0 if status in ("INVALIDATED", "EXPIRED") else None)
+        )
+        item["spread_charged"] = entry_activated
     item["shadow_entry_model"] = "FVG_70_PERCENT_DEPTH"
     item["assumed_spread_price_units"] = ASSUMED_SPREAD
-    item["spread_cost_r_estimate"] = round(spread_r, 4) if spread_r is not None else None
-    result_r = item.get("result_r")
-    item["estimated_net_r_after_spread"] = (
-        round(float(result_r) - spread_r, 4)
-        if result_r is not None and spread_r is not None
-        else None
-    )
     item["execution_verified"] = False
     history.append(item)
 
@@ -91,24 +110,27 @@ resolved = [x for x in history if x.get("status") in ("TP", "SL", "AMBIGUOUS")]
 tp_count = sum(x.get("status") == "TP" for x in resolved)
 sl_count = sum(x.get("status") == "SL" for x in resolved)
 amb_count = sum(x.get("status") == "AMBIGUOUS" for x in resolved)
-net_r = sum(float(x.get("result_r") or 0) for x in resolved)
-net_r_after_spread = sum(
+gross_r = sum(float(x.get("result_r") or 0) for x in resolved)
+net_r = sum(
     float(x["estimated_net_r_after_spread"])
     for x in resolved if x.get("estimated_net_r_after_spread") is not None
 )
 payload["shadow_history_stats"] = {
     "replay_records": len(history),
-    "resolved": len(resolved),
+    "resolved_executed_or_activated": len(resolved),
     "tp": tp_count,
     "sl": sl_count,
     "ambiguous": amb_count,
+    "expired_unfilled": sum(x.get("status") == "EXPIRED" for x in history),
+    "invalidated_unfilled": sum(x.get("status") == "INVALIDATED" for x in history),
     "pending_or_active": sum(x.get("status") in ("PENDING", "ACTIVE") for x in history),
     "win_rate_percent_excluding_ambiguous": round(tp_count / (tp_count + sl_count) * 100, 2)
         if tp_count + sl_count else None,
-    "gross_result_r_including_ambiguous_as_zero": round(net_r, 4),
-    "estimated_net_result_r_after_spread": round(net_r_after_spread, 4),
+    "gross_result_r": round(gross_r, 4),
+    "estimated_net_result_r_after_spread": round(net_r, 4),
+    "spread_charged_only_to_entry_activated": True,
     "spread_assumption": ASSUMED_SPREAD,
-    "warning": "Rolling-window replay estimate, not tick-accurate fills; history only covers candles fetched in this run."
+    "warning": "Rolling-window OHLC replay estimate, not tick-accurate fills; history only covers candles fetched in this run."
 }
 payload["shadow_history_file"] = HISTORY_OUT.name
 HISTORY_OUT.write_text(json.dumps({
@@ -142,7 +164,7 @@ else:
     payload["spread_simulation"] = {
         "status": "NO_CURRENT_SIGNAL",
         "assumed_spread_price_units": ASSUMED_SPREAD,
-        "note": "No current signal; spread-adjusted trade outcomes are summarized in shadow_history_stats when replay records exist."
+        "note": "No current signal; only entry-activated replay trades are charged spread in shadow_history_stats."
     }
 
 OUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
