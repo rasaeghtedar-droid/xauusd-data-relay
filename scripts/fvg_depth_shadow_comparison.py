@@ -19,7 +19,7 @@ MAX_PERSISTENT_BARS = 10000
 ORIGINAL_FVG_AT = live.fvg_at
 
 def load_comparison_bars():
-    """Merge latest relay candles into a persistent, isolated shadow-test history."""
+    """Merge persistent history with relay and ALWAYS attempt a direct fresh M5 fetch."""
     by_time = {}
     persistence_note = "persistent shadow candle store"
     if PERSISTENT_BARS.exists():
@@ -29,7 +29,7 @@ def load_comparison_bars():
                 if b.get("openTime"):
                     by_time[str(b["openTime"])] = {"openTime": str(b["openTime"]), "open": float(b["open"]), "high": float(b["high"]), "low": float(b["low"]), "close": float(b["close"])}
         except (OSError, ValueError, TypeError, KeyError):
-            persistence_note = "persistent store unreadable; rebuilt from available relay history"
+            persistence_note = "persistent store unreadable; rebuilt from available sources"
             by_time = {}
     relay_fetched_at = None
     relay_count = 0
@@ -44,20 +44,25 @@ def load_comparison_bars():
                     relay_count += 1
         except (OSError, ValueError, TypeError, KeyError):
             pass
-    if len(by_time) < 100:
-        try:
-            api_bars, api_diag = live.fetch_closed_m5()
-            for b in api_bars:
-                if b.get("openTime"):
-                    by_time[str(b["openTime"])] = {"openTime": str(b["openTime"]), "open": float(b["open"]), "high": float(b["high"]), "low": float(b["low"]), "close": float(b["close"])}
-        except Exception:
-            pass
+    direct_api_count = 0
+    direct_api_latest = None
+    direct_api_error = None
+    try:
+        api_bars, api_diag = live.fetch_closed_m5()
+        for b in api_bars:
+            if b.get("openTime"):
+                by_time[str(b["openTime"])] = {"openTime": str(b["openTime"]), "open": float(b["open"]), "high": float(b["high"]), "low": float(b["low"]), "close": float(b["close"])}
+                direct_api_count += 1
+        if api_bars:
+            direct_api_latest = max(str(b["openTime"]) for b in api_bars if b.get("openTime"))
+    except Exception as exc:
+        direct_api_error = f"{type(exc).__name__}: {exc}"[:500]
     bars = sorted(by_time.values(), key=lambda b: b["openTime"])[-MAX_PERSISTENT_BARS:]
     if len(bars) < 100:
         raise RuntimeError(f"Insufficient closed M5 bars for shadow comparison: {len(bars)}")
     PERSISTENT_BARS.parent.mkdir(parents=True, exist_ok=True)
     PERSISTENT_BARS.write_text(json.dumps({"schema_version": 1, "purpose": "isolated FVG 50% vs 70% shadow comparison only", "updated_at_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"), "bar_count": len(bars), "max_bars": MAX_PERSISTENT_BARS, "bars": bars}, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
-    diagnostics = {"source": "persistent shadow history + latest main relay closed M5 bars", "relay_fetched_at": relay_fetched_at, "relay_bars_merged_this_run": relay_count, "persistent_history_bars": len(bars), "first_persisted_bar": bars[0]["openTime"], "latest_closed_open_time": bars[-1]["openTime"], "persistent_store": str(PERSISTENT_BARS.relative_to(ROOT)), "persistence_note": persistence_note}
+    diagnostics = {"source": "persistent history + latest relay bars + direct Biquote fetch attempted each run", "relay_fetched_at": relay_fetched_at, "relay_bars_merged_this_run": relay_count, "direct_api_bars_merged_this_run": direct_api_count, "direct_api_latest_closed_open_time": direct_api_latest, "direct_api_error": direct_api_error, "persistent_history_bars": len(bars), "first_persisted_bar": bars[0]["openTime"], "latest_closed_open_time": bars[-1]["openTime"], "persistent_store": str(PERSISTENT_BARS.relative_to(ROOT)), "persistence_note": persistence_note}
     return bars, diagnostics
 
 def fvg_at_depth(depth):
