@@ -1,4 +1,4 @@
-name: FVG 70 Live Shadow Test
+name: FVG Depth Shadow Collector
 
 on:
   schedule:
