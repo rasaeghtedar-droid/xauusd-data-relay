@@ -8,9 +8,9 @@
     "sl": 4093.782,
     "tp": 4087.92,
     "rr": 2.26,
-    "status": "PENDING",
+    "status": "ACTIVE",
     "result_r": null,
-    "activation_time": null,
+    "activation_time": "2026-10-22T08:20:00Z",
     "pending_expiry_minutes": 60,
     "exit_time": null,
     "pending_invalidation_rule": "closed M5 candle beyond original FVG boundary"
