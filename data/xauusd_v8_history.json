@@ -8,12 +8,13 @@
     "sl": 4047.978,
     "tp": 4044.024,
     "rr": 2.05,
-    "status": "PENDING",
-    "result_r": null,
-    "activation_time": null,
+    "status": "TP",
+    "result_r": 2.05,
+    "activation_time": "2026-10-22T17:40:00Z",
     "pending_expiry_minutes": 60,
-    "exit_time": null,
-    "pending_invalidation_rule": "closed M5 candle beyond original FVG boundary"
+    "exit_time": "2026-10-22T17:40:00Z",
+    "pending_invalidation_rule": "closed M5 candle beyond original FVG boundary",
+    "icon": "✅"
   },
   {
     "signal_key": "SELL|2026-10-22T12:30:00Z",
