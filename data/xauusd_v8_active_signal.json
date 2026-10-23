@@ -1,5 +1,19 @@
 {
-  "status": "NO TRADE",
-  "signal_key": null,
-  "signal": null
+  "status": "SIGNAL",
+  "signal_key": "SELL|2026-10-23T08:55:00Z",
+  "signal": {
+    "engine": "FVG_EXECUTABLE_AUDIT_V8_CAP4",
+    "direction": "SELL",
+    "formation_time": "2026-10-23T01:05:00Z",
+    "confirmation_time": "2026-10-23T08:55:00Z",
+    "entry": 4024.756,
+    "sl": 4027.749,
+    "tp": 4016.943,
+    "rr": 2.61,
+    "target_rule": "V8_CAP4",
+    "status": "PENDING_ENTRY",
+    "activation_time": null,
+    "pending_expiry_minutes": 60,
+    "pending_invalidation_rule": "closed M5 candle beyond original FVG boundary"
+  }
 }
