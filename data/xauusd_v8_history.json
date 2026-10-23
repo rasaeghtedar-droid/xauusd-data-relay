@@ -12,7 +12,8 @@
     "result_r": null,
     "activation_time": null,
     "pending_expiry_minutes": 60,
-    "exit_time": null
+    "exit_time": null,
+    "pending_invalidation_rule": "closed M5 candle beyond original FVG boundary"
   },
   {
     "signal_key": "SELL|2026-10-22T17:20:00Z",
@@ -72,8 +73,8 @@
     "formation_time": "2026-10-22T08:20:00Z",
     "entry": 4086.443,
     "sl": 4083.725,
-    "tp": 4091.984,
-    "rr": 2.04,
+    "tp": 4094.934,
+    "rr": 3.12,
     "status": "SL",
     "result_r": -1.0,
     "activation_time": "2026-10-22T08:50:00Z",
