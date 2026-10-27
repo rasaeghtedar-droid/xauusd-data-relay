@@ -8,12 +8,14 @@
     "sl": 4027.208,
     "tp": 4020.445,
     "rr": 3.59,
-    "status": "PENDING",
-    "result_r": null,
+    "status": "EXPIRED",
+    "result_r": 0.0,
     "activation_time": null,
     "pending_expiry_minutes": 60,
-    "exit_time": null,
-    "pending_invalidation_rule": "closed M5 candle beyond original FVG boundary"
+    "exit_time": "2026-10-27T05:20:00Z",
+    "pending_invalidation_rule": "closed M5 candle beyond original FVG boundary",
+    "icon": "⌛",
+    "expiry_reason": "Entry not touched within 60 minutes"
   },
   {
     "signal_key": "BUY|2026-10-27T00:40:00Z",
