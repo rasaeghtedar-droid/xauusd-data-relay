@@ -1,5 +1,20 @@
 [
   {
+    "signal_key": "BUY|2026-10-30T09:10:00Z",
+    "direction": "BUY",
+    "confirmation_time": "2026-10-30T09:10:00Z",
+    "formation_time": "2026-10-30T08:50:00Z",
+    "entry": 3991.149,
+    "sl": 3988.602,
+    "tp": 4000.287,
+    "rr": 3.59,
+    "status": "PENDING",
+    "result_r": null,
+    "activation_time": null,
+    "pending_expiry_minutes": 60,
+    "exit_time": null
+  },
+  {
     "signal_key": "SELL|2026-10-30T02:15:00Z",
     "direction": "SELL",
     "confirmation_time": "2026-10-30T02:15:00Z",
